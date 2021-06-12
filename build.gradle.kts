@@ -9,6 +9,9 @@ repositories {
 
 dependencies {
     implementation(gradleApi())
+
+    implementation("commons-io:commons-io:2.9.0")
+    implementation("org.json:json:20210307")
 }
 
 publishing {
