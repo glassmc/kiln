@@ -22,7 +22,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
     }
 
     public File getCache() {
-        File cache = new File(this.project.getGradle().getGradleUserHomeDir() + "/caches/glass");
+        File cache = new File(this.project.getGradle().getGradleUserHomeDir() + "/caches/kiln");
         cache.mkdirs();
         return cache;
     }
