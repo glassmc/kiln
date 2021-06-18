@@ -1,7 +1,7 @@
-package ml.glassmc.kiln.main.task;
+package io.github.glassmc.kiln.main.task;
 
-import ml.glassmc.kiln.common.Util;
-import ml.glassmc.kiln.main.KilnMainPlugin;
+import io.github.glassmc.kiln.common.Util;
+import io.github.glassmc.kiln.main.KilnMainPlugin;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 

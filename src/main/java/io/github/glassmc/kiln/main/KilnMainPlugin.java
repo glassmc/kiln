@@ -1,15 +1,16 @@
-package ml.glassmc.kiln.standard;
+package io.github.glassmc.kiln.main;
 
+import io.github.glassmc.kiln.main.task.GetRunConfiguration;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 
 import java.io.File;
 
-public class KilnStandardPlugin implements Plugin<Project> {
+public class KilnMainPlugin implements Plugin<Project> {
 
-    private static KilnStandardPlugin instance;
+    private static KilnMainPlugin instance;
 
-    public static KilnStandardPlugin getInstance() {
+    public static KilnMainPlugin getInstance() {
         return instance;
     }
 
@@ -19,16 +20,14 @@ public class KilnStandardPlugin implements Plugin<Project> {
     public void apply(Project project) {
         instance = this;
         this.project = project;
+
+        project.getTasks().register("getRunConfiguration", GetRunConfiguration.class);
     }
 
     public File getCache() {
         File cache = new File(this.project.getGradle().getGradleUserHomeDir() + "/caches/kiln");
         cache.mkdirs();
         return cache;
-    }
-
-    public File getLocalRepository() {
-        return new File(this.getCache(), "repository");
     }
 
     public Project getProject() {

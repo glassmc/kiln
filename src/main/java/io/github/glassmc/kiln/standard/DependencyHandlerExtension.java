@@ -1,18 +1,10 @@
-package ml.glassmc.kiln.standard;
+package io.github.glassmc.kiln.standard;
 
-import ml.glassmc.kiln.common.SystemUtil;
-import ml.glassmc.kiln.common.Util;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
+import io.github.glassmc.kiln.common.Util;
 import org.gradle.api.file.FileCollection;
-import org.json.JSONObject;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Objects;
 
