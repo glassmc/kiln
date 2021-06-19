@@ -2,6 +2,10 @@ apply plugin: 'java'
 
 repositories {
     mavenCentral()
+    mavenLocal()
+    maven {
+        url = 'https://jitpack.io/'
+    }
 }
 
 dependencies {
@@ -9,4 +13,8 @@ dependencies {
 
     implementation 'commons-io:commons-io:2.9.0'
     implementation 'org.json:json:20210307'
+    implementation 'org.ow2.asm:asm-tree:9.1'
+    implementation 'org.ow2.asm:asm-commons:9.1'
+
+    implementation 'com.github.glassmc:sand:a5a6fa12bb'
 }

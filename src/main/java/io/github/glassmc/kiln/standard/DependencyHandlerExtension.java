@@ -19,11 +19,12 @@ public class DependencyHandlerExtension {
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
         File versionJARFile = new File(versionFile, id + "-" + version + ".jar");
+        File versionMappedJARFile = new File(versionFile, id + "-" + version + "-mapped.jar");
         File versionLibraries = new File(versionFile, "libraries");
 
         Util.downloadMinecraft(id, version, pluginCache);
 
-        files.add(versionJARFile.getAbsolutePath());
+        files.add(versionMappedJARFile.getAbsolutePath());
         for (File file : Objects.requireNonNull(versionLibraries.listFiles())) {
             files.add(file.getAbsolutePath());
         }
