@@ -16,5 +16,5 @@ dependencies {
     implementation 'org.ow2.asm:asm-tree:9.1'
     implementation 'org.ow2.asm:asm-commons:9.1'
 
-    implementation 'com.github.glassmc:sand:a5a6fa12bb'
+    implementation 'com.github.fabricmc:tiny-mappings-parser:750be4e739'
 }

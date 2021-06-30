@@ -2,6 +2,7 @@ package io.github.glassmc.kiln.main.task;
 
 import io.github.glassmc.kiln.common.Util;
 import io.github.glassmc.kiln.main.KilnMainPlugin;
+import io.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 
@@ -16,7 +17,7 @@ public abstract class GetRunConfiguration extends DefaultTask {
         String version = (String) this.getProject().getProperties().get("version");
 
         File pluginCache = KilnMainPlugin.getInstance().getCache();
-        File jar = Util.downloadMinecraft(environment, version, pluginCache);
+        File jar = Util.downloadMinecraft(environment, version, pluginCache, null);
         File dependencies = new File(jar.getParentFile(), "libraries");
         File natives = new File(jar.getParentFile(), "natives");
 

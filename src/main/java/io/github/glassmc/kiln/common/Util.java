@@ -1,7 +1,7 @@
 package io.github.glassmc.kiln.common;
 
-import io.github.glassmc.sand.ClassMapping;
-import io.github.glassmc.sand.Mapping;
+import io.github.glassmc.kiln.standard.KilnStandardPlugin;
+import io.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.json.JSONObject;
@@ -24,14 +24,13 @@ import java.util.jar.JarOutputStream;
 
 public class Util {
 
-    public static File downloadMinecraft(String id, String version, File pluginCache) {
+    public static File downloadMinecraft(String id, String version, File pluginCache, IMappingsProvider mappingsProvider) {
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
         File versionJARFile = new File(versionFile, id + "-" + version + ".jar");
-        File versionMappingsFile = new File(versionFile, id + ".mapping");
-        File versionMappedJARFile = new File(versionFile, id + "-" + version + "-mapped.jar");
+        File versionMappedJARFile = new File(versionFile, id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
 
-        if (!versionJARFile.exists()) {
+        if (!versionMappedJARFile.exists()) {
             try {
                 URL versionsURL = new URL("https://launchermeta.mojang.com/mc/game/version_manifest.json");
                 JSONObject versions = new JSONObject(IOUtils.toString(versionsURL, StandardCharsets.UTF_8));
@@ -58,40 +57,32 @@ public class Util {
                 URL versionJarURL = new URL(versionManifest.getJSONObject("downloads").getJSONObject(id).getString("url"));
                 FileUtils.copyURLToFile(versionJarURL, versionJARFile);
 
-                URL versionMappingsURL = new URL("https://raw.githubusercontent.com/glassmc/sand/main/mappings/" + id + ".mapping");
-                FileUtils.copyURLToFile(versionMappingsURL, versionMappingsFile);
+                Remapper remapper = mappingsProvider.getRemapper(IMappingsProvider.Direction.TO_NAMED);
+                if(remapper != null) {
+                    JarOutputStream outputStream = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(versionMappedJARFile)));
 
-                Mapping mapping = Mapping.fromFile(versionMappingsFile);
-                Remapper remapper = new Remapper() {
-                    @Override
-                    public String map(String internalName) {
-                        ClassMapping classMapping = mapping.getClass("obfuscated", internalName);
-                        return classMapping != null ? classMapping.getName("deobfuscated") : internalName;
-                    }
-                };
-                JarOutputStream outputStream = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(versionMappedJARFile)));
+                    JarFile input = new JarFile(versionJARFile);
+                    Enumeration<JarEntry> entries = input.entries();
+                    while(entries.hasMoreElements()) {
+                        JarEntry entry = entries.nextElement();
+                        if(!entry.isDirectory()) {
+                            if(entry.getName().endsWith(".class") && !entry.getName().contains("/")) {
+                                ClassReader classReader = new ClassReader(IOUtils.readFully(input.getInputStream(entry), (int) entry.getSize()));
+                                ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+                                ClassVisitor visitor = new ClassRemapper(writer, remapper);
+                                classReader.accept(visitor, ClassReader.EXPAND_FRAMES);
 
-                JarFile input = new JarFile(versionJARFile);
-                Enumeration<JarEntry> entries = input.entries();
-                while(entries.hasMoreElements()) {
-                    JarEntry entry = entries.nextElement();
-                    if(!entry.isDirectory()) {
-                        if(entry.getName().endsWith(".class") && !entry.getName().contains("/")) {
-                            ClassReader classReader = new ClassReader(IOUtils.readFully(input.getInputStream(entry), (int) entry.getSize()));
-                            ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-                            ClassVisitor visitor = new ClassRemapper(writer, remapper);
-                            classReader.accept(visitor, ClassReader.EXPAND_FRAMES);
-
-                            outputStream.putNextEntry(new JarEntry(remapper.map(entry.getName().replace(".class", "")) + ".class"));
-                            outputStream.write(writer.toByteArray());
-                        } else {
-                            outputStream.putNextEntry(new JarEntry(entry.getName()));
-                            outputStream.write(IOUtils.readFully(input.getInputStream(entry), (int) entry.getSize()));
+                                outputStream.putNextEntry(new JarEntry(remapper.map(entry.getName().replace(".class", "")) + ".class"));
+                                outputStream.write(writer.toByteArray());
+                            } else {
+                                outputStream.putNextEntry(new JarEntry(entry.getName()));
+                                outputStream.write(IOUtils.readFully(input.getInputStream(entry), (int) entry.getSize()));
+                            }
+                            outputStream.closeEntry();
                         }
-                        outputStream.closeEntry();
                     }
+                    outputStream.close();
                 }
-                outputStream.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
