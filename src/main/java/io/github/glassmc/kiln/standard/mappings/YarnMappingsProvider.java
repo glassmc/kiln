@@ -17,6 +17,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
         {
             put("1.7.10", "https://maven.legacyfabric.net/net/fabricmc/yarn/1.7.10+build.202106280130/yarn-1.7.10+build.202106280130-mergedv2.jar");
             put("1.8.9", "https://maven.legacyfabric.net/net/fabricmc/yarn/1.8.9+build.202106280028/yarn-1.8.9+build.202106280028-mergedv2.jar");
+            put("1.17", "https://maven.fabricmc.net/net/fabricmc/yarn/1.17+build.13/yarn-1.17+build.13-mergedv2.jar");
         }
     };
 
