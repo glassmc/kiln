@@ -4,21 +4,21 @@ import io.github.glassmc.kiln.common.Util;
 import io.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import io.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
 import io.github.glassmc.kiln.standard.mappings.YarnMappingsProvider;
+import org.gradle.api.Project;
 import org.gradle.api.file.FileCollection;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class DependencyHandlerExtension {
 
-    public static IMappingsProvider mappingsProvider;
+    public static Map<Project, IMappingsProvider> mappingsProviders = new HashMap<>();
 
     public static FileCollection minecraft(String id, String version, String mappingsProviderId) {
         KilnStandardPlugin plugin = KilnStandardPlugin.getInstance();
         File pluginCache = plugin.getCache();
 
+        IMappingsProvider mappingsProvider;
         switch(mappingsProviderId) {
             case "yarn":
                 mappingsProvider = new YarnMappingsProvider();
@@ -27,6 +27,7 @@ public class DependencyHandlerExtension {
             default:
                 mappingsProvider = new ObfuscatedMappingsProvider();
         }
+        mappingsProviders.put(plugin.getProject(), mappingsProvider);
 
         List<String> files = new ArrayList<>();
 
