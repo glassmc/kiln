@@ -74,7 +74,7 @@ public class Util {
 
                                 outputStream.putNextEntry(new JarEntry(remapper.map(entry.getName().replace(".class", "")) + ".class"));
                                 outputStream.write(writer.toByteArray());
-                            } else {
+                            } else if(!entry.getName().contains("META-INF")) {
                                 outputStream.putNextEntry(new JarEntry(entry.getName()));
                                 outputStream.write(IOUtils.readFully(input.getInputStream(entry), (int) entry.getSize()));
                             }
