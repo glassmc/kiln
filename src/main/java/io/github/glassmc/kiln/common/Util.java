@@ -68,17 +68,18 @@ public class Util {
                         if(!entry.isDirectory()) {
                             if(entry.getName().endsWith(".class") && !entry.getName().contains("/")) {
                                 ClassReader classReader = new ClassReader(IOUtils.readFully(input.getInputStream(entry), (int) entry.getSize()));
-                                ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+                                ClassWriter writer = new ClassWriter(0);
                                 ClassVisitor visitor = new ClassRemapper(writer, remapper);
-                                classReader.accept(visitor, ClassReader.EXPAND_FRAMES);
+                                classReader.accept(visitor, 0);
 
                                 outputStream.putNextEntry(new JarEntry(remapper.map(entry.getName().replace(".class", "")) + ".class"));
                                 outputStream.write(writer.toByteArray());
+                                outputStream.closeEntry();
                             } else if(!entry.getName().contains("META-INF")) {
                                 outputStream.putNextEntry(new JarEntry(entry.getName()));
                                 outputStream.write(IOUtils.readFully(input.getInputStream(entry), (int) entry.getSize()));
+                                outputStream.closeEntry();
                             }
-                            outputStream.closeEntry();
                         }
                     }
                     outputStream.close();
