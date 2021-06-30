@@ -28,6 +28,7 @@ public class DependencyHandlerExtension {
                 mappingsProvider = new ObfuscatedMappingsProvider();
         }
         mappingsProviders.put(plugin.getProject(), mappingsProvider);
+        System.out.println(plugin);
 
         List<String> files = new ArrayList<>();
 

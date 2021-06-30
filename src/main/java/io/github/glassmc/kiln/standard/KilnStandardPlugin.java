@@ -59,7 +59,12 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 }
 
                 try {
-                    Remapper remapper = DependencyHandlerExtension.mappingsProviders.get(getProject()).getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED);
+                    IMappingsProvider mappingsProvider = DependencyHandlerExtension.mappingsProviders.get(getProject());
+                    if(mappingsProvider == null) {
+                        return;
+                    }
+
+                    Remapper remapper = mappingsProvider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED);
 
                     InputStream inputStream = new FileInputStream(file);
                     ClassReader classReader = new ClassReader(IOUtils.readFully(inputStream, inputStream.available()));
