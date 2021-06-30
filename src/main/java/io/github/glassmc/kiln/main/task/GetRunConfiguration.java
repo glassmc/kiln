@@ -17,7 +17,7 @@ public abstract class GetRunConfiguration extends DefaultTask {
         String version = (String) this.getProject().getProperties().get("version");
 
         File pluginCache = KilnMainPlugin.getInstance().getCache();
-        File jar = Util.downloadMinecraft(environment, version, pluginCache, null);
+        File jar = Util.downloadMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider());
         File dependencies = new File(jar.getParentFile(), "libraries");
         File natives = new File(jar.getParentFile(), "natives");
 
