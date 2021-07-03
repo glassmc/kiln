@@ -2,10 +2,7 @@ package io.github.glassmc.kiln.standard;
 
 import io.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import org.apache.commons.io.IOUtils;
-import org.gradle.api.Action;
-import org.gradle.api.Plugin;
-import org.gradle.api.Project;
-import org.gradle.api.Task;
+import org.gradle.api.*;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -53,19 +50,20 @@ public class KilnStandardPlugin implements Plugin<Project> {
         @Override
         public void execute(Task task) {
             File classes = new File(project.getBuildDir(), "classes");
+
+            IMappingsProvider mappingsProvider = DependencyHandlerExtension.mappingsProviders.get(getProject());
+            if(mappingsProvider == null) {
+                return;
+            }
+
+            Remapper remapper = mappingsProvider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED);
+
             for(File file : project.fileTree(classes)) {
                 if(!file.getName().endsWith(".class")) {
                     continue;
                 }
 
                 try {
-                    IMappingsProvider mappingsProvider = DependencyHandlerExtension.mappingsProviders.get(getProject());
-                    if(mappingsProvider == null) {
-                        return;
-                    }
-
-                    Remapper remapper = mappingsProvider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED);
-
                     InputStream inputStream = new FileInputStream(file);
                     ClassReader classReader = new ClassReader(IOUtils.readFully(inputStream, inputStream.available()));
                     ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
