@@ -15,7 +15,7 @@ import java.util.zip.ZipEntry;
 
 public class YarnMappingsProvider implements IMappingsProvider {
 
-    private final Map<String, String> mappings = new HashMap<>() {
+    private final Map<String, String> mappings = new HashMap<String, String>() {
         {
             put("1.7.10", "https://maven.legacyfabric.net/net/fabricmc/yarn/1.7.10+build.202106280130/yarn-1.7.10+build.202106280130-mergedv2.jar");
             put("1.8.9", "https://maven.legacyfabric.net/net/fabricmc/yarn/1.8.9+build.202106280028/yarn-1.8.9+build.202106280028-mergedv2.jar");
