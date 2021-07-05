@@ -3,6 +3,7 @@ package io.github.glassmc.kiln.standard;
 import io.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import org.apache.commons.io.IOUtils;
 import org.gradle.api.*;
+import org.gradle.api.artifacts.Dependency;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -57,6 +58,9 @@ public class KilnStandardPlugin implements Plugin<Project> {
             }
 
             Remapper remapper = mappingsProvider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED);
+
+            System.out.println("remove " + getProject());
+            DependencyHandlerExtension.mappingsProviders.remove(getProject());
 
             for(File file : project.fileTree(classes)) {
                 if(!file.getName().endsWith(".class")) {
