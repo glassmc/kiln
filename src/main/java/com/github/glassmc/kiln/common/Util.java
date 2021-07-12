@@ -1,6 +1,6 @@
-package io.github.glassmc.kiln.common;
+package com.github.glassmc.kiln.common;
 
-import io.github.glassmc.kiln.standard.mappings.IMappingsProvider;
+import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.json.JSONObject;

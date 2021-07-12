@@ -1,9 +1,9 @@
-package io.github.glassmc.kiln.standard;
+package com.github.glassmc.kiln.standard;
 
-import io.github.glassmc.kiln.common.Util;
-import io.github.glassmc.kiln.standard.mappings.IMappingsProvider;
-import io.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
-import io.github.glassmc.kiln.standard.mappings.YarnMappingsProvider;
+import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
+import com.github.glassmc.kiln.common.Util;
+import com.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
+import com.github.glassmc.kiln.standard.mappings.YarnMappingsProvider;
 import org.gradle.api.Project;
 import org.gradle.api.file.FileCollection;
 

@@ -1,8 +1,8 @@
-package io.github.glassmc.kiln.main.task;
+package com.github.glassmc.kiln.main.task;
 
-import io.github.glassmc.kiln.common.Util;
-import io.github.glassmc.kiln.main.KilnMainPlugin;
-import io.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
+import com.github.glassmc.kiln.main.KilnMainPlugin;
+import com.github.glassmc.kiln.common.Util;
+import com.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 

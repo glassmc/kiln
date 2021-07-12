@@ -1,4 +1,4 @@
-package io.github.glassmc.kiln.standard.mappings;
+package com.github.glassmc.kiln.standard.mappings;
 
 import net.fabricmc.mapping.tree.*;
 import org.apache.commons.io.FileUtils;

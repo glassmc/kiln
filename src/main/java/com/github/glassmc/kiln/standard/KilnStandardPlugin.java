@@ -1,9 +1,8 @@
-package io.github.glassmc.kiln.standard;
+package com.github.glassmc.kiln.standard;
 
-import io.github.glassmc.kiln.standard.mappings.IMappingsProvider;
+import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import org.apache.commons.io.IOUtils;
 import org.gradle.api.*;
-import org.gradle.api.artifacts.Dependency;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;

@@ -1,7 +1,7 @@
-package io.github.glassmc.kiln.main;
+package com.github.glassmc.kiln.main;
 
-import io.github.glassmc.kiln.main.task.GenerateRunConfiguration;
-import io.github.glassmc.kiln.main.task.GetRunConfiguration;
+import com.github.glassmc.kiln.main.task.GenerateRunConfiguration;
+import com.github.glassmc.kiln.main.task.GetRunConfiguration;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 

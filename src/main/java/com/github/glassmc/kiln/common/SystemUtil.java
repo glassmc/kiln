@@ -1,4 +1,4 @@
-package io.github.glassmc.kiln.common;
+package com.github.glassmc.kiln.common;
 
 import java.util.Locale;
 
