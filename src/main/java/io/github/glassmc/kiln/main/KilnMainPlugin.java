@@ -1,5 +1,6 @@
 package io.github.glassmc.kiln.main;
 
+import io.github.glassmc.kiln.main.task.GenerateRunConfiguration;
 import io.github.glassmc.kiln.main.task.GetRunConfiguration;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -22,6 +23,7 @@ public class KilnMainPlugin implements Plugin<Project> {
         this.project = project;
 
         project.getTasks().register("getRunConfiguration", GetRunConfiguration.class);
+        project.getTasks().register("genRunConfiguration", GenerateRunConfiguration.class);
     }
 
     public File getCache() {
