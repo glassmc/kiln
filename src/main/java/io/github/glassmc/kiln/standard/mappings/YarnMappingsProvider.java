@@ -18,8 +18,16 @@ public class YarnMappingsProvider implements IMappingsProvider {
     private final Map<String, String> mappings = new HashMap<String, String>() {
         {
             put("1.7.10", "https://maven.legacyfabric.net/net/fabricmc/yarn/1.7.10+build.202106280130/yarn-1.7.10+build.202106280130-mergedv2.jar");
-            put("1.8.9", "https://maven.legacyfabric.net/net/fabricmc/yarn/1.8.9+build.202106280028/yarn-1.8.9+build.202106280028-mergedv2.jar");
+            put("1.8.9", "https://maven.legacyfabric.net/net/fabricmc/yarn/1.8.9+build.202107080308/yarn-1.8.9+build.202107080308-mergedv2.jar");
+            put("1.12.2", "https://maven.legacyfabric.net/net/fabricmc/yarn/1.12.2+build.202106280130/yarn-1.12.2+build.202106280130-mergedv2.jar");
+            put("1.16", "https://maven.fabricmc.net/net/fabricmc/yarn/1.16+build.4/yarn-1.16+build.4-mergedv2.jar");
+            put("1.16.1", "https://maven.fabricmc.net/net/fabricmc/yarn/1.16.1+build.21/yarn-1.16.1+build.21-mergedv2.jar");
+            put("1.16.2", "https://maven.fabricmc.net/net/fabricmc/yarn/1.16.2+build.47/yarn-1.16.2+build.47-mergedv2.jar");
+            put("1.16.3", "https://maven.fabricmc.net/net/fabricmc/yarn/1.16.3+build.47/yarn-1.16.3+build.47-mergedv2.jar");
+            put("1.16.4", "https://maven.fabricmc.net/net/fabricmc/yarn/1.16.4+build.9/yarn-1.16.4+build.9-mergedv2.jar");
+            put("1.16.5", "https://maven.fabricmc.net/net/fabricmc/yarn/1.16.5+build.10/yarn-1.16.5+build.10-mergedv2.jar");
             put("1.17", "https://maven.fabricmc.net/net/fabricmc/yarn/1.17+build.13/yarn-1.17+build.13-mergedv2.jar");
+            put("1.17.1", "https://maven.fabricmc.net/net/fabricmc/yarn/1.17.1+build.10/yarn-1.17.1+build.10-mergedv2.jar");
         }
     };
 
