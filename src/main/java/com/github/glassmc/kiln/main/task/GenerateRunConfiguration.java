@@ -30,8 +30,8 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
     @TaskAction
     public void run() {
-        String environment = (String) this.getProject().getProperties().get("environment");
-        String version = (String) this.getProject().getProperties().get("version");
+        String environment = (String) this.getProject().getProperties().get("minecraftEnvironment");
+        String version = (String) this.getProject().getProperties().get("minecraftVersion");
 
         File runConfigurationsFile = new File(".idea/runConfigurations");
         runConfigurationsFile.mkdirs();
@@ -49,7 +49,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         vmArgsBuilder.append(" -Djava.library.path=").append(natives.getAbsolutePath());
 
         String name = environment.substring(0, 1).toUpperCase(Locale.ROOT) + environment.substring(1) + " " + version;
-        String mainClass = environment.equals("client") ? "io.github.glassmc.loader.client.GlassClientMain" : null;
+        String mainClass = environment.equals("client") ? "com.github.glassmc.loader.client.GlassClientMain" : null;
         String module = getProject().getRootProject().getName() + ".exec.main";
         String programArguments = "--accessToken 0 --version " + version + " --userProperties {}";
         String vmArguments = vmArgsBuilder.toString();
