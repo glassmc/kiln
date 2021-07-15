@@ -57,32 +57,30 @@ public class Util {
                 FileUtils.copyURLToFile(versionJarURL, versionJARFile);
 
                 Remapper remapper = mappingsProvider.getRemapper(IMappingsProvider.Direction.TO_NAMED);
-                if(remapper != null) {
-                    JarOutputStream outputStream = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(versionMappedJARFile)));
+                JarOutputStream outputStream = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(versionMappedJARFile)));
 
-                    JarFile input = new JarFile(versionJARFile);
-                    Enumeration<JarEntry> entries = input.entries();
-                    while(entries.hasMoreElements()) {
-                        JarEntry entry = entries.nextElement();
-                        if(!entry.isDirectory()) {
-                            if(entry.getName().endsWith(".class") && !entry.getName().contains("/")) {
-                                ClassReader classReader = new ClassReader(IOUtils.readFully(input.getInputStream(entry), (int) entry.getSize()));
-                                ClassWriter writer = new ClassWriter(0);
-                                ClassVisitor visitor = new ClassRemapper(writer, remapper);
-                                classReader.accept(visitor, 0);
+                JarFile input = new JarFile(versionJARFile);
+                Enumeration<JarEntry> entries = input.entries();
+                while(entries.hasMoreElements()) {
+                    JarEntry entry = entries.nextElement();
+                    if(!entry.isDirectory()) {
+                        if(entry.getName().endsWith(".class") && !entry.getName().contains("/")) {
+                            ClassReader classReader = new ClassReader(IOUtils.readFully(input.getInputStream(entry), (int) entry.getSize()));
+                            ClassWriter writer = new ClassWriter(0);
+                            ClassVisitor visitor = new ClassRemapper(writer, remapper);
+                            classReader.accept(visitor, 0);
 
-                                outputStream.putNextEntry(new JarEntry(remapper.map(entry.getName().replace(".class", "")) + ".class"));
-                                outputStream.write(writer.toByteArray());
-                                outputStream.closeEntry();
-                            } else if(!entry.getName().contains("META-INF")) {
-                                outputStream.putNextEntry(new JarEntry(entry.getName()));
-                                outputStream.write(IOUtils.readFully(input.getInputStream(entry), (int) entry.getSize()));
-                                outputStream.closeEntry();
-                            }
+                            outputStream.putNextEntry(new JarEntry(remapper.map(entry.getName().replace(".class", "")) + ".class"));
+                            outputStream.write(writer.toByteArray());
+                            outputStream.closeEntry();
+                        } else if(!entry.getName().contains("META-INF")) {
+                            outputStream.putNextEntry(new JarEntry(entry.getName()));
+                            outputStream.write(IOUtils.readFully(input.getInputStream(entry), (int) entry.getSize()));
+                            outputStream.closeEntry();
                         }
                     }
-                    outputStream.close();
                 }
+                outputStream.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }

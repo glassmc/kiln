@@ -20,8 +20,14 @@ public class YarnMappingsProvider implements IMappingsProvider {
 
     private final Map<String, Pair<String, String>> mappings = new HashMap<String, Pair<String, String>>() {
         {
-            put("1.7.10", null);
-            put("1.8.9", null);
+            put("1.7.10", Pair.of(
+                    "https://maven.legacyfabric.net/net/fabricmc/intermediary/1.7.10/intermediary-1.7.10-v2.jar",
+                    "https://maven.legacyfabric.net/net/fabricmc/yarn/1.7.10+build.202106280130/yarn-1.7.10+build.202106280130-v2.jar"
+            ));
+            put("1.8.9", Pair.of(
+                    "https://maven.legacyfabric.net/net/fabricmc/intermediary/1.8.9/intermediary-1.8.9-v2.jar",
+                    "https://maven.legacyfabric.net/net/fabricmc/yarn/1.8.9+build.202107080308/yarn-1.8.9+build.202107080308-v2.jar"
+            ));
             put("1.12.2", null);
             put("1.14", Pair.of(
                     "https://maven.fabricmc.net/net/fabricmc/intermediary/1.14/intermediary-1.14-v2.jar",
@@ -117,17 +123,21 @@ public class YarnMappingsProvider implements IMappingsProvider {
         try {
             String intermediaryFileBase = intermediaryURL.getFile().substring(intermediaryURL.getFile().lastIndexOf("/")).substring(1).replace(".jar", "");
             String namedFileBase = namedURL.getFile().substring(namedURL.getFile().lastIndexOf("/")).substring(1).replace(".jar", "");
-            File intermediaryMappingsFile = new File(temp, intermediaryFileBase + ".jar");
-            File namedMappingsFile = new File(temp, namedFileBase + ".jar");
-            FileUtils.copyURLToFile(namedURL, namedMappingsFile);
-            FileUtils.copyURLToFile(intermediaryURL, intermediaryMappingsFile);
 
-            JarFile intermediary = new JarFile(intermediaryMappingsFile);
             File intermediaryMappings = new File(temp, intermediaryFileBase + ".tiny");
-            FileUtils.copyInputStreamToFile(intermediary.getInputStream(new ZipEntry("mappings/mappings.tiny")), intermediaryMappings);
-            JarFile namedJARFile = new JarFile(namedMappingsFile);
             File namedMappings = new File(temp, namedFileBase + ".tiny");
-            FileUtils.copyInputStreamToFile(namedJARFile.getInputStream(new ZipEntry("mappings/mappings.tiny")), namedMappings);
+
+            if(!intermediaryMappings.exists() || !namedMappings.exists()) {
+                File intermediaryMappingsFile = new File(temp, intermediaryFileBase + ".jar");
+                File namedMappingsFile = new File(temp, namedFileBase + ".jar");
+                FileUtils.copyURLToFile(namedURL, namedMappingsFile);
+                FileUtils.copyURLToFile(intermediaryURL, intermediaryMappingsFile);
+
+                JarFile intermediaryJARFile = new JarFile(intermediaryMappingsFile);
+                FileUtils.copyInputStreamToFile(intermediaryJARFile.getInputStream(new ZipEntry("mappings/mappings.tiny")), intermediaryMappings);
+                JarFile namedJARFile = new JarFile(namedMappingsFile);
+                FileUtils.copyInputStreamToFile(namedJARFile.getInputStream(new ZipEntry("mappings/mappings.tiny")), namedMappings);
+            }
 
             this.intermediaryTree = TinyMappingFactory.load(new BufferedReader(new FileReader(intermediaryMappings)));
             this.namedTree = TinyMappingFactory.load(new BufferedReader(new FileReader(namedMappings)));
@@ -154,8 +164,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
 
     @Override
     public void destroy() {
-        this.intermediaryTree = null;
-        this.parentClasses = null;
+
     }
 
     @Override
@@ -164,20 +173,20 @@ public class YarnMappingsProvider implements IMappingsProvider {
         String middle = "intermediary";
         String output = direction == Direction.TO_NAMED ? "named" : "official";
 
-        TinyRemapper intermediary = new TinyRemapper(this.intermediaryTree, input, middle);
-        TinyRemapper result = new TinyRemapper(this.namedTree, middle, output);
+        TinyRemapper initial = new TinyRemapper(direction == Direction.TO_NAMED ? this.intermediaryTree : this.namedTree, input, middle);
+        TinyRemapper result = new TinyRemapper(direction == Direction.TO_NAMED ? this.namedTree : this.intermediaryTree, middle, output);
 
         return new Remapper() {
 
             @Override
             public String map(String internalName) {
-                return result.map(intermediary.map(internalName));
+                return result.map(initial.map(internalName));
             }
 
             @Override
             public String mapMethodName(String owner, String name, String descriptor) {
-                for(ClassDef classDef : getClasses(owner)) {
-                    String newName = result.mapMethodName(classDef.getName(middle), intermediary.mapMethodName(classDef.getName(input), name, descriptor), intermediary.mapDesc(descriptor));
+                for(ClassDef classDef : getClasses(owner, direction)) {
+                    String newName = result.mapMethodName(classDef.getName(middle), initial.mapMethodName(classDef.getName(input), name, descriptor), initial.mapDesc(descriptor));
                     if(!newName.equals(name)) {
                         return newName;
                     }
@@ -187,8 +196,8 @@ public class YarnMappingsProvider implements IMappingsProvider {
 
             @Override
             public String mapFieldName(String owner, String name, String descriptor) {
-                for(ClassDef classDef : getClasses(owner)) {
-                    String newName = result.mapFieldName(classDef.getName(middle), intermediary.mapFieldName(classDef.getName(input), name, descriptor), intermediary.mapDesc(descriptor));
+                for(ClassDef classDef : getClasses(owner, direction)) {
+                    String newName = result.mapFieldName(classDef.getName(middle), initial.mapFieldName(classDef.getName(input), name, descriptor), initial.mapDesc(descriptor));
                     if(!newName.equals(name)) {
                         return newName;
                     }
@@ -199,15 +208,26 @@ public class YarnMappingsProvider implements IMappingsProvider {
         };
     }
 
-    private List<ClassDef> getClasses(String name) {
+    private List<ClassDef> getClasses(String name, Direction direction) {
         List<ClassDef> parents = new ArrayList<>();
-        if(intermediaryTree.getDefaultNamespaceClassMap().get(name) != null) {
-            parents.add(intermediaryTree.getDefaultNamespaceClassMap().get(name));
+        Collection<ClassDef> classes = null;
+        if(direction == Direction.TO_NAMED) {
+            classes = intermediaryTree.getClasses();
+        } else if(direction == Direction.TO_OBFUSCATED) {
+            classes = namedTree.getClasses();
+        }
+
+        String inputName = direction == Direction.TO_NAMED ? "official" : "named";
+
+        for(ClassDef classDef : classes) {
+            if (classDef.getName(inputName).equals(name)) {
+                parents.add(classDef);
+            }
         }
 
         if(parentClasses.get(name) != null) {
             for(String string : parentClasses.get(name)) {
-                parents.addAll(this.getClasses(string));
+                parents.addAll(this.getClasses(string, direction));
             }
         }
 
@@ -225,7 +245,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
                 String className = clazz.getName(from);
                 classNames.put(className, clazz.getName(to));
                 for(FieldDef field : clazz.getFields()) {
-                    fieldNames.put(new EntryTriple(className, field.getName(from), field.getDescriptor(from)), field.getName(to));
+                    fieldNames.put(new EntryTriple(className, field.getName(from), ""), field.getName(to));
                 }
                 for(MethodDef method : clazz.getMethods()) {
                     methodNames.put(new EntryTriple(className, method.getName(from), method.getDescriptor(from)), method.getName(to));
@@ -240,7 +260,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
 
         @Override
         public String mapFieldName(final String owner, final String name, final String descriptor) {
-            return fieldNames.getOrDefault(new EntryTriple(owner, name, descriptor), name);
+            return fieldNames.getOrDefault(new EntryTriple(owner, name, ""), name);
         }
 
         @Override
@@ -254,38 +274,5 @@ public class YarnMappingsProvider implements IMappingsProvider {
     public String getID() {
         return "yarn";
     }
-
-    /*@Override
-            public Object mapValue(Object value) {
-                if(value instanceof String) {
-                    if(((String) value).contains("#") && ((String) value).length() >= 6) {
-                        String[] classElementSplit = ((String) value).split("#");
-                        for(ClassDef classDef : intermediaryTree.getClasses()) {
-                            if(classDef.getName(input).equals(classElementSplit[0])) {
-                                if(classElementSplit[1].contains("(")) {
-                                    String[] methodDescriptorSplit = classElementSplit[1].split("\\(");
-                                    methodDescriptorSplit[1] = "(" + methodDescriptorSplit[1];
-                                    for(MethodDef methodDef : classDef.getMethods()) {
-                                        if(methodDef.getName(input).equals(methodDescriptorSplit[0]) && methodDef.getDescriptor(input).equals(methodDescriptorSplit[1])) {
-                                            return classDef.getName(output) + "#" + methodDef.getName(output) + methodDef.getDescriptor(output);
-                                        }
-                                    }
-                                } else {
-                                    for(FieldDef fieldDef : classDef.getFields()) {
-                                        if(fieldDef.getName(input).equals(classElementSplit[1])) {
-                                            return classDef.getName(output) + "#" + fieldDef.getName(output);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        for(ClassDef classDef : intermediaryTree.getClasses()) {
-                            if(classDef.getName(input).equals(value)) {
-                                return classDef.getName(output);
-                            }
-                        }
-                    }
-                }*/
 
 }
