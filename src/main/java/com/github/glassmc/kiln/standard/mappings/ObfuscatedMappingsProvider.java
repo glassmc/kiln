@@ -12,6 +12,11 @@ public class ObfuscatedMappingsProvider implements IMappingsProvider {
     }
 
     @Override
+    public void destroy() {
+
+    }
+
+    @Override
     public Remapper getRemapper(Direction direction) {
         return new Remapper() { };
     }

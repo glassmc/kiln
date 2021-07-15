@@ -2,6 +2,7 @@ package com.github.glassmc.kiln.standard;
 
 import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import com.github.glassmc.kiln.common.Util;
+import com.github.glassmc.kiln.standard.mappings.NoSuchMappingsException;
 import com.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
 import com.github.glassmc.kiln.standard.mappings.YarnMappingsProvider;
 import org.gradle.api.Project;
@@ -34,13 +35,20 @@ public class DependencyHandlerExtension {
 
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
-        File versionJARFile = new File(versionFile, id + "-" + version + ".jar");
         File versionMappedJARFile = new File(versionFile, id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
         File versionLibraries = new File(versionFile, "libraries");
 
-        mappingsProvider.setup(versionFile, version);
+        Util.downloadMinecraft(id, version, pluginCache, new ObfuscatedMappingsProvider());
+
+        try {
+            mappingsProvider.setup(versionFile, version);
+        } catch (NoSuchMappingsException e) {
+            e.printStackTrace();
+        }
 
         Util.downloadMinecraft(id, version, pluginCache, mappingsProvider);
+
+        mappingsProvider.destroy();
 
         files.add(versionMappedJARFile.getAbsolutePath());
         for (File file : Objects.requireNonNull(versionLibraries.listFiles())) {
