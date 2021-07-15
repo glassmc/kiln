@@ -186,7 +186,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
             @Override
             public String mapMethodName(String owner, String name, String descriptor) {
                 for(ClassDef classDef : getClasses(owner, direction)) {
-                    String newName = result.mapMethodName(classDef.getName(middle), initial.mapMethodName(classDef.getName(input), name, descriptor), initial.mapDesc(descriptor));
+                    String newName = result.mapMethodName(classDef.getName(middle), initial.mapMethodName(classDef.getName(input), name, descriptor), initial.mapMethodDesc(descriptor));
                     if(!newName.equals(name)) {
                         return newName;
                     }
