@@ -169,6 +169,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
 
     @Override
     public Remapper getRemapper(Direction direction) {
+        System.out.println(parentClasses);
         String input = direction == Direction.TO_NAMED ? "official" : "named";
         String middle = "intermediary";
         String output = direction == Direction.TO_NAMED ? "named" : "official";
@@ -185,7 +186,8 @@ public class YarnMappingsProvider implements IMappingsProvider {
 
             @Override
             public String mapMethodName(String owner, String name, String descriptor) {
-                for(ClassDef classDef : getClasses(owner, direction)) {
+                for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
+                    System.out.println("P " + classDef.getName(middle));
                     String newName = result.mapMethodName(classDef.getName(middle), initial.mapMethodName(classDef.getName(input), name, descriptor), initial.mapMethodDesc(descriptor));
                     if(!newName.equals(name)) {
                         return newName;
@@ -196,7 +198,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
 
             @Override
             public String mapFieldName(String owner, String name, String descriptor) {
-                for(ClassDef classDef : getClasses(owner, direction)) {
+                for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
                     String newName = result.mapFieldName(classDef.getName(middle), initial.mapFieldName(classDef.getName(input), name, descriptor), initial.mapDesc(descriptor));
                     if(!newName.equals(name)) {
                         return newName;
@@ -208,30 +210,34 @@ public class YarnMappingsProvider implements IMappingsProvider {
         };
     }
 
-    private List<ClassDef> getClasses(String name, Direction direction) {
+    private List<ClassDef> getClasses(String obfName, Direction direction) {
         List<ClassDef> parents = new ArrayList<>();
-        Collection<ClassDef> classes = null;
-        if(direction == Direction.TO_NAMED) {
-            classes = intermediaryTree.getClasses();
-        } else if(direction == Direction.TO_OBFUSCATED) {
-            classes = namedTree.getClasses();
-        }
 
-        String inputName = direction == Direction.TO_NAMED ? "official" : "named";
-
-        for(ClassDef classDef : classes) {
-            if (classDef.getName(inputName).equals(name)) {
+        ClassDef classDef = this.intermediaryTree.getDefaultNamespaceClassMap().get(obfName);
+        if(classDef != null) {
+            if(direction == Direction.TO_NAMED) {
                 parents.add(classDef);
+            } else if(direction == Direction.TO_OBFUSCATED) {
+                parents.add(this.namedTree.getDefaultNamespaceClassMap().get(classDef.getName("intermediary")));
             }
         }
 
-        if(parentClasses.get(name) != null) {
-            for(String string : parentClasses.get(name)) {
+        if(parentClasses.get(obfName) != null) {
+            for(String string : parentClasses.get(obfName)) {
                 parents.addAll(this.getClasses(string, direction));
             }
         }
 
         return parents;
+    }
+
+    private String getObfName(String name, Direction direction, Remapper initial, Remapper result) {
+        if(direction == Direction.TO_NAMED) {
+            return name;
+        } else if(direction == Direction.TO_OBFUSCATED) {
+            return result.map(initial.map(name));
+        }
+        return name;
     }
 
     private static class TinyRemapper extends Remapper {

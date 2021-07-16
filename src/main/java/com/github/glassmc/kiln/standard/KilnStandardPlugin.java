@@ -97,6 +97,8 @@ public class KilnStandardPlugin implements Plugin<Project> {
                         newName = remapper1.mapMethodName(owner, newName, descriptor);
                     }
                     newName = remapper.mapMethodName(owner, newName, descriptor);
+
+                    System.out.println(owner + " " + name + " " + newName + " " + descriptor);
                     return newName;
                 }
 
