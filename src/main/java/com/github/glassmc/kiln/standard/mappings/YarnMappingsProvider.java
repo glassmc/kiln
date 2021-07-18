@@ -169,7 +169,6 @@ public class YarnMappingsProvider implements IMappingsProvider {
 
     @Override
     public Remapper getRemapper(Direction direction) {
-        System.out.println(parentClasses);
         String input = direction == Direction.TO_NAMED ? "official" : "named";
         String middle = "intermediary";
         String output = direction == Direction.TO_NAMED ? "named" : "official";
@@ -187,7 +186,6 @@ public class YarnMappingsProvider implements IMappingsProvider {
             @Override
             public String mapMethodName(String owner, String name, String descriptor) {
                 for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
-                    System.out.println("P " + classDef.getName(middle));
                     String newName = result.mapMethodName(classDef.getName(middle), initial.mapMethodName(classDef.getName(input), name, descriptor), initial.mapMethodDesc(descriptor));
                     if(!newName.equals(name)) {
                         return newName;

@@ -22,6 +22,8 @@ public class KilnStandardPlugin implements Plugin<Project> {
     private Project project;
     private KilnStandardExtension extension;
 
+    private IMappingsProvider mappingsProvider;
+
     @Override
     public void apply(Project project) {
         instance = this;
@@ -40,12 +42,16 @@ public class KilnStandardPlugin implements Plugin<Project> {
         return cache;
     }
 
-    public File getLocalRepository() {
-        return new File(this.getCache(), "repository");
-    }
-
     public Project getProject() {
         return project;
+    }
+
+    public void setMappingsProvider(IMappingsProvider mappingsProvider) {
+        this.mappingsProvider = mappingsProvider;
+    }
+
+    public IMappingsProvider getMappingsProvider() {
+        return mappingsProvider;
     }
 
     private class ReobfuscateAction implements Action<Task> {
@@ -54,7 +60,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
         public void execute(Task task) {
             File classes = new File(project.getBuildDir(), "classes");
 
-            IMappingsProvider mappingsProvider = DependencyHandlerExtension.mappingsProviders.get(getProject());
+            IMappingsProvider mappingsProvider = getMappingsProvider();
             if(mappingsProvider == null) {
                 return;
             }
@@ -98,7 +104,6 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     }
                     newName = remapper.mapMethodName(owner, newName, descriptor);
 
-                    System.out.println(owner + " " + name + " " + newName + " " + descriptor);
                     return newName;
                 }
 
@@ -144,8 +149,6 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     return newName;
                 }
             };
-
-            DependencyHandlerExtension.mappingsProviders.remove(getProject());
 
             for(File file : project.fileTree(classes)) {
                 if(!file.getName().endsWith(".class")) {

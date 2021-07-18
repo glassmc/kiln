@@ -5,15 +5,12 @@ import com.github.glassmc.kiln.common.Util;
 import com.github.glassmc.kiln.standard.mappings.NoSuchMappingsException;
 import com.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
 import com.github.glassmc.kiln.standard.mappings.YarnMappingsProvider;
-import org.gradle.api.Project;
 import org.gradle.api.file.FileCollection;
 
 import java.io.File;
 import java.util.*;
 
 public class DependencyHandlerExtension {
-
-    public static Map<Project, IMappingsProvider> mappingsProviders = new HashMap<>();
 
     public static FileCollection minecraft(String id, String version, String mappingsProviderId) {
         KilnStandardPlugin plugin = KilnStandardPlugin.getInstance();
@@ -28,7 +25,7 @@ public class DependencyHandlerExtension {
             default:
                 mappingsProvider = new ObfuscatedMappingsProvider();
         }
-        mappingsProviders.put(plugin.getProject(), mappingsProvider);
+        plugin.setMappingsProvider(mappingsProvider);
 
         List<String> files = new ArrayList<>();
 
