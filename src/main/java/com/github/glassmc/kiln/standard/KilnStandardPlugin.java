@@ -8,8 +8,10 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.Remapper;
+import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
+import java.util.*;
 
 public class KilnStandardPlugin implements Plugin<Project> {
 
@@ -65,54 +67,27 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 return;
             }
 
-            final boolean[] setParents = {false};
-
             Remapper remapper = mappingsProvider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED);
             Remapper realRemapper = new Remapper() {
 
                 @Override
                 public String map(String name) {
-                    if(!setParents[0]) {
-                        for(CustomRemapper customRemapper : extension.remappers) {
-                            customRemapper.setParent(this);
-                        }
-                        setParents[0] = true;
-                    }
-
-                    String newName = remapper.map(name);
-                    for(Remapper remapper1 : extension.remappers) {
-                        newName = remapper1.map(newName);
-                    }
-                    return newName;
+                    return remapper.map(name);
                 }
 
                 @Override
                 public String mapFieldName(String owner, String name, String descriptor) {
-                    String newName = name;
-                    for(Remapper remapper1 : extension.remappers) {
-                        newName = remapper1.mapFieldName(owner, newName, descriptor);
-                    }
-                    newName = remapper.mapFieldName(owner, name, descriptor);
-                    return newName;
+                    return remapper.mapFieldName(owner, name, descriptor);
                 }
 
                 @Override
                 public String mapMethodName(String owner, String name, String descriptor) {
-                    String newName = name;
-                    for(Remapper remapper1 : extension.remappers) {
-                        newName = remapper1.mapMethodName(owner, newName, descriptor);
-                    }
-                    newName = remapper.mapMethodName(owner, newName, descriptor);
-
-                    return newName;
+                    return remapper.mapMethodName(owner, name, descriptor);
                 }
 
                 @Override
                 public Object mapValue(Object value) {
                     Object newValue = value;
-                    for(Remapper remapper1 : extension.remappers) {
-                        newValue = remapper1.mapValue(newValue);
-                    }
                     if(newValue instanceof String) {
                         String valueString = (String) newValue;
                         if ((valueString).contains("#") && (valueString).length() >= 6) {
@@ -141,14 +116,11 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
                 @Override
                 public String mapAnnotationAttributeName(String descriptor, String name) {
-                    String newName = name;
-                    for(Remapper remapper1 : extension.remappers) {
-                        newName = remapper1.mapAnnotationAttributeName(descriptor, newName);
-                    }
-                    newName = remapper.mapAnnotationAttributeName(descriptor, name);
-                    return newName;
+                    return remapper.mapAnnotationAttributeName(descriptor, name);
                 }
             };
+
+            Map<String, ClassNode> classNodes = new HashMap<>();
 
             for(File file : project.fileTree(classes)) {
                 if(!file.getName().endsWith(".class")) {
@@ -158,11 +130,27 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 try {
                     InputStream inputStream = new FileInputStream(file);
                     ClassReader classReader = new ClassReader(IOUtils.readFully(inputStream, inputStream.available()));
-                    ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-                    ClassVisitor visitor = new ClassRemapper(writer, realRemapper);
-                    classReader.accept(visitor, ClassReader.EXPAND_FRAMES);
+                    ClassNode classNode = new ClassNode();
+                    classReader.accept(classNode, 0);
+
+                    classNodes.put(file.getAbsolutePath().replace(new File(classes, "java/main").getAbsolutePath() + "/", "").replace(".class", ""), classNode);
                     inputStream.close();
-                    OutputStream outputStream = new FileOutputStream(file);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            for(CustomRemapper customRemapper : extension.remappers) {
+                customRemapper.setParent(remapper);
+                customRemapper.map(classNodes);
+            }
+
+            for(Map.Entry<String, ClassNode> classNode : classNodes.entrySet()) {
+                ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+                ClassVisitor visitor = new ClassRemapper(writer, realRemapper);
+                classNode.getValue().accept(visitor);
+                try {
+                    OutputStream outputStream = new FileOutputStream(new File(new File(classes, "java/main"), classNode.getKey() + ".class"));
                     outputStream.write(writer.toByteArray());
                     outputStream.close();
                 } catch (IOException e) {

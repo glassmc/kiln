@@ -1,8 +1,11 @@
 package com.github.glassmc.kiln.standard;
 
 import org.objectweb.asm.commons.Remapper;
+import org.objectweb.asm.tree.ClassNode;
 
-public class CustomRemapper extends Remapper {
+import java.util.Map;
+
+public class CustomRemapper {
 
     private Remapper parent;
 
@@ -12,6 +15,10 @@ public class CustomRemapper extends Remapper {
 
     public void setParent(Remapper parent) {
         this.parent = parent;
+    }
+
+    public void map(Map<String, ClassNode> classNode) {
+
     }
 
 }
