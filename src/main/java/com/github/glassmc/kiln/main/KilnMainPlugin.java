@@ -2,6 +2,7 @@ package com.github.glassmc.kiln.main;
 
 import com.github.glassmc.kiln.main.task.GenerateRunConfiguration;
 import com.github.glassmc.kiln.main.task.GetRunConfiguration;
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar;
 import groovy.lang.Closure;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -31,6 +32,12 @@ public class KilnMainPlugin implements Plugin<Project> {
         project.getTasks().register("genRunConfiguration", GenerateRunConfiguration.class);
 
         Configuration shadowRuntime = project.getConfigurations().create("shadowRuntime");
+        project.getConfigurations().getByName("runtimeOnly").extendsFrom(shadowRuntime);
+
+        ShadowJar shadowJar = (ShadowJar) project.getTasks().getByName("shadowJar");
+        shadowJar.getConfigurations().clear();
+        shadowJar.getConfigurations().add(project.getConfigurations().getByName("shadowRuntime"));
+
 
         project.getGradle().addListener(new DependencyResolutionListener() {
             @Override
