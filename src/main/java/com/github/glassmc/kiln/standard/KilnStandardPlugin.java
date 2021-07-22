@@ -1,8 +1,10 @@
 package com.github.glassmc.kiln.standard;
 
 import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar;
 import org.apache.commons.io.IOUtils;
 import org.gradle.api.*;
+import org.gradle.api.artifacts.Configuration;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -11,6 +13,7 @@ import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.util.*;
 
 public class KilnStandardPlugin implements Plugin<Project> {
@@ -32,6 +35,23 @@ public class KilnStandardPlugin implements Plugin<Project> {
         this.project = project;
 
         this.extension = project.getExtensions().create("kiln", KilnStandardExtension.class);
+
+        project.getPlugins().apply("java-library");
+
+        project.getTasks().getByName("compileJava").dependsOn(project.getTasks().getByName("processResources"));
+
+        project.getPlugins().apply("com.github.johnrengelman.shadow");
+
+        Configuration shadowImplementation = project.getConfigurations().create("shadowImplementation");
+        project.getConfigurations().getByName("implementation").extendsFrom(shadowImplementation);
+
+        Configuration shadowApi = project.getConfigurations().create("shadowApi");
+        project.getConfigurations().getByName("api").extendsFrom(shadowApi);
+
+        ShadowJar shadowJar = (ShadowJar) project.getTasks().getByName("shadowJar");
+        shadowJar.getConfigurations().clear();
+        shadowJar.getConfigurations().add(project.getConfigurations().getByName("shadowImplementation"));
+        shadowJar.getConfigurations().add(project.getConfigurations().getByName("shadowApi"));
 
         project.afterEvaluate(p -> {
             project.getTasks().findByName("compileJava").doLast(new ReobfuscateAction());
