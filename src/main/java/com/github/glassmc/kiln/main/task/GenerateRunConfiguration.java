@@ -50,7 +50,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
         String name = environment.substring(0, 1).toUpperCase(Locale.ROOT) + environment.substring(1) + " " + version;
         String mainClass = environment.equals("client") ? "com.github.glassmc.loader.client.GlassClientMain" : null;
-        String module = getProject().getRootProject().getName() + ".exec.main";
+        String module = getProject().getRootProject().getName();
         String programArguments = "--accessToken 0 --version " + version + " --userProperties {}";
         String vmArguments = vmArgsBuilder.toString();
 
