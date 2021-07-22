@@ -13,7 +13,6 @@ import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.util.*;
 
 public class KilnStandardPlugin implements Plugin<Project> {
