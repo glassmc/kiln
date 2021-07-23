@@ -38,7 +38,6 @@ public class KilnMainPlugin implements Plugin<Project> {
         shadowJar.getConfigurations().clear();
         shadowJar.getConfigurations().add(project.getConfigurations().getByName("shadowRuntime"));
 
-
         project.getGradle().addListener(new DependencyResolutionListener() {
             @Override
             public void beforeResolve(ResolvableDependencies resolvableDependencies) {

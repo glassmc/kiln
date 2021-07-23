@@ -3,6 +3,7 @@ package com.github.glassmc.kiln.main.task;
 import com.github.glassmc.kiln.main.KilnMainPlugin;
 import com.github.glassmc.kiln.common.Util;
 import com.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
+import org.apache.commons.io.FileUtils;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 
@@ -50,7 +51,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
         String name = environment.substring(0, 1).toUpperCase(Locale.ROOT) + environment.substring(1) + " " + version;
         String mainClass = environment.equals("client") ? "com.github.glassmc.loader.client.GlassClientMain" : null;
-        String module = getProject().getRootProject().getName();
+        String module = getProject().getRootProject().getName() + ".main";
         String programArguments = "--accessToken 0 --version " + version + " --userProperties {}";
         String vmArguments = vmArgsBuilder.toString();
 
@@ -63,6 +64,8 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        new File("run").mkdirs();
     }
 
 }
