@@ -72,7 +72,7 @@ public class DependencyHandlerExtension {
         FileCollection files = plugin.getProject().files(file);
 
         try {
-            URL url = new URL("https://raw.githubusercontent.com/glassmc/registry/main/shards/" + id + "/" + version + "/" + id + "-" + version + ".toml");
+            URL url = new URL("https://raw.githubusercontent.com/bottlemc/glove-registry/main/shards/" + id + "/" + version + "/" + id + "-" + version + ".toml");
             String shardVersionData = IOUtils.toString(url, StandardCharsets.UTF_8);
             TomlTable shardVersionDataTOML = Toml.from(new StringReader(shardVersionData));
             if(!file.exists()) {
