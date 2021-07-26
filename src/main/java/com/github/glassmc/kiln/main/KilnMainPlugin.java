@@ -3,7 +3,6 @@ package com.github.glassmc.kiln.main;
 import com.github.glassmc.kiln.main.task.GenerateRunConfiguration;
 import com.github.glassmc.kiln.main.task.GetRunConfiguration;
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar;
-import groovy.lang.Closure;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -51,8 +50,6 @@ public class KilnMainPlugin implements Plugin<Project> {
                     map.put("path", project1.getPath());
                     map.put("configuration", "shadow");
                     shadowRuntime.getDependencies().add(project.getDependencies().create(project.getDependencies().project(map)));
-
-                    runtimeOnly.getDependencies().add(project.getDependencies().create(project1));
                 }
             }
 

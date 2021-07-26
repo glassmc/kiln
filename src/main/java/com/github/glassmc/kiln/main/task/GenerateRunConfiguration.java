@@ -24,7 +24,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
             "    <option name=\"VM_PARAMETERS\" value=\"%s\" />\n" +
             "    <option name=\"WORKING_DIRECTORY\" value=\"run\" />\n" +
             "    <method v=\"2\">\n" +
-            "      <option name=\"Make\" enabled=\"true\" />\n" +
+            "      <option name=\"Gradle.BeforeRunTask\" enabled=\"true\" tasks=\"shadowJar\" externalProjectPath=\"$PROJECT_DIR$\" vmOptions=\"\" scriptParameters=\"\" />\n" +
             "    </method>\n" +
             "  </configuration>\n" +
             "</component>";
