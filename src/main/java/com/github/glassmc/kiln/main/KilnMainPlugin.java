@@ -32,7 +32,8 @@ public class KilnMainPlugin implements Plugin<Project> {
         project.getTasks().register("genRunConfiguration", GenerateRunConfiguration.class);
 
         Configuration shadowRuntime = project.getConfigurations().create("shadowRuntime");
-        project.getConfigurations().getByName("runtimeOnly").extendsFrom(shadowRuntime);
+        Configuration runtimeOnly = project.getConfigurations().getByName("runtimeOnly");
+        runtimeOnly.extendsFrom(shadowRuntime);
 
         ShadowJar shadowJar = (ShadowJar) project.getTasks().getByName("shadowJar");
         shadowJar.getConfigurations().clear();
@@ -50,6 +51,8 @@ public class KilnMainPlugin implements Plugin<Project> {
                     map.put("path", project1.getPath());
                     map.put("configuration", "shadow");
                     shadowRuntime.getDependencies().add(project.getDependencies().create(project.getDependencies().project(map)));
+
+                    runtimeOnly.getDependencies().add(project.getDependencies().create(project1));
                 }
             }
 
