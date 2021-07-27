@@ -27,6 +27,8 @@ public class KilnMainPlugin implements Plugin<Project> {
         instance = this;
         this.project = project;
 
+        project.getPluginManager().apply("kiln-standard");
+
         project.getTasks().register("getRunConfiguration", GetRunConfiguration.class);
         project.getTasks().register("genRunConfiguration", GenerateRunConfiguration.class);
 
@@ -35,7 +37,6 @@ public class KilnMainPlugin implements Plugin<Project> {
         runtimeOnly.extendsFrom(shadowRuntime);
 
         ShadowJar shadowJar = (ShadowJar) project.getTasks().getByName("shadowJar");
-        shadowJar.getConfigurations().clear();
         shadowJar.getConfigurations().add(project.getConfigurations().getByName("shadowRuntime"));
 
         project.getGradle().addListener(new DependencyResolutionListener() {
