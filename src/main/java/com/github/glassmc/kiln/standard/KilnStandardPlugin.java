@@ -86,6 +86,26 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 return;
             }
 
+            Map<String, ClassNode> classNodes = new HashMap<>();
+
+            for(File file : project.fileTree(classes)) {
+                if(!file.getName().endsWith(".class")) {
+                    continue;
+                }
+
+                try {
+                    InputStream inputStream = new FileInputStream(file);
+                    ClassReader classReader = new ClassReader(IOUtils.readFully(inputStream, inputStream.available()));
+                    ClassNode classNode = new ClassNode();
+                    classReader.accept(classNode, 0);
+
+                    classNodes.put(file.getAbsolutePath().replace(new File(classes, "java/main").getAbsolutePath() + "/", "").replace(".class", ""), classNode);
+                    inputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
             Remapper remapper = mappingsProvider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED);
             Remapper realRemapper = new Remapper() {
 
@@ -96,12 +116,34 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
                 @Override
                 public String mapFieldName(String owner, String name, String descriptor) {
-                    return remapper.mapFieldName(owner, name, descriptor);
+                    String newName = remapper.mapFieldName(owner, name, descriptor);
+                    if (newName.equals(name)) {
+                        ClassNode classNode = classNodes.get(owner);
+                        if (classNode != null) {
+                            newName = this.mapFieldName(classNode.superName, newName, descriptor);
+
+                            for (String interfaceName : classNode.interfaces) {
+                                newName = this.mapFieldName(interfaceName, newName, descriptor);
+                            }
+                        }
+                    }
+                    return newName;
                 }
 
                 @Override
                 public String mapMethodName(String owner, String name, String descriptor) {
-                    return remapper.mapMethodName(owner, name, descriptor);
+                    String newName = remapper.mapMethodName(owner, name, descriptor);
+                    if (newName.equals(name)) {
+                        ClassNode classNode = classNodes.get(owner);
+                        if (classNode != null) {
+                            newName = this.mapMethodName(classNode.superName, newName, descriptor);
+
+                            for (String interfaceName : classNode.interfaces) {
+                                newName = this.mapMethodName(interfaceName, newName, descriptor);
+                            }
+                        }
+                    }
+                    return newName;
                 }
 
                 @Override
@@ -138,26 +180,6 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     return remapper.mapAnnotationAttributeName(descriptor, name);
                 }
             };
-
-            Map<String, ClassNode> classNodes = new HashMap<>();
-
-            for(File file : project.fileTree(classes)) {
-                if(!file.getName().endsWith(".class")) {
-                    continue;
-                }
-
-                try {
-                    InputStream inputStream = new FileInputStream(file);
-                    ClassReader classReader = new ClassReader(IOUtils.readFully(inputStream, inputStream.available()));
-                    ClassNode classNode = new ClassNode();
-                    classReader.accept(classNode, 0);
-
-                    classNodes.put(file.getAbsolutePath().replace(new File(classes, "java/main").getAbsolutePath() + "/", "").replace(".class", ""), classNode);
-                    inputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
 
             for(CustomRemapper customRemapper : extension.remappers) {
                 customRemapper.setParent(remapper);
