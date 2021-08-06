@@ -1,4 +1,4 @@
-# Glass - Kiln
+# Kiln
 Gradle plugin to aid in the development of shards.
 
 ## Roadmap
@@ -10,8 +10,8 @@ Gradle plugin to aid in the development of shards.
    - [ ] MCP Mappings
    - [ ] Mojang Mappings
    - [ ] Sand Mappings? (Custom GlassMC Mappings)
- - [ ] Depending On Shards
-   - [ ] Shard Dependencies
+ - [x] Depending On Shards
+   - [x] Shard Dependencies
  - [ ] Publish Task (Creating a PR in [registry](https://github.com/glassmc/registry))
    - [ ] Correctly Collecting Dependencies
 
