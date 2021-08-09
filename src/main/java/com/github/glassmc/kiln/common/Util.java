@@ -64,7 +64,7 @@ public class Util {
                 while(entries.hasMoreElements()) {
                     JarEntry entry = entries.nextElement();
                     if(!entry.isDirectory()) {
-                        if(entry.getName().endsWith(".class") && !entry.getName().contains("/")) {
+                        if(entry.getName().endsWith(".class")) {
                             ClassReader classReader = new ClassReader(IOUtils.readFully(input.getInputStream(entry), (int) entry.getSize()));
                             ClassWriter writer = new ClassWriter(0);
                             ClassVisitor visitor = new ClassRemapper(writer, remapper);

@@ -34,7 +34,7 @@ public class DependencyHandlerExtension {
             default:
                 mappingsProvider = new ObfuscatedMappingsProvider();
         }
-        plugin.setMappingsProvider(mappingsProvider);
+        plugin.addMappingsProvider(mappingsProvider);
 
         List<String> files = new ArrayList<>();
 

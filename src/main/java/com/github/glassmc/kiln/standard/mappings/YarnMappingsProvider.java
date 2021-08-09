@@ -5,12 +5,14 @@ import net.fabricmc.mapping.util.EntryTriple;
 import org.apache.commons.io.FileUtils;
 import org.gradle.internal.Pair;
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -96,12 +98,15 @@ public class YarnMappingsProvider implements IMappingsProvider {
         }
     };
 
+    private String version;
     private TinyTree namedTree;
     private TinyTree intermediaryTree;
     private Map<String, List<String>> parentClasses;
 
     @Override
     public void setup(File minecraftFile, String version) throws NoSuchMappingsException {
+        this.version = version;
+
         File temp = new File(minecraftFile, "temp");
         Pair<String, String> mappingURLs = mappings.get(version);
 
@@ -176,6 +181,8 @@ public class YarnMappingsProvider implements IMappingsProvider {
         TinyRemapper initial = new TinyRemapper(direction == Direction.TO_NAMED ? this.intermediaryTree : this.namedTree, input, middle);
         TinyRemapper result = new TinyRemapper(direction == Direction.TO_NAMED ? this.namedTree : this.intermediaryTree, middle, output);
 
+        System.out.println("---");
+
         return new Remapper() {
 
             @Override
@@ -186,7 +193,8 @@ public class YarnMappingsProvider implements IMappingsProvider {
             @Override
             public String mapMethodName(String owner, String name, String descriptor) {
                 for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
-                    String newName = result.mapMethodName(classDef.getName(middle), initial.mapMethodName(classDef.getName(input), name, descriptor), initial.mapMethodDesc(descriptor));
+                    String newName = result.mapMethodName(classDef.getName(middle), initial.mapMethodName(getName(input, classDef), name, descriptor), initial.mapMethodDesc(descriptor));
+                    System.out.println(owner + " " + name + " " + newName + " " + initial.mapMethodName(getName(input, classDef), name, descriptor) + " " + getName(input, classDef));
                     if(!newName.equals(name)) {
                         return newName;
                     }
@@ -197,7 +205,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
             @Override
             public String mapFieldName(String owner, String name, String descriptor) {
                 for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
-                    String newName = result.mapFieldName(classDef.getName(middle), initial.mapFieldName(classDef.getName(input), name, descriptor), initial.mapDesc(descriptor));
+                    String newName = result.mapFieldName(classDef.getName(middle), initial.mapFieldName(getName(input, classDef), name, descriptor), initial.mapDesc(descriptor));
                     if(!newName.equals(name)) {
                         return newName;
                     }
@@ -206,6 +214,13 @@ public class YarnMappingsProvider implements IMappingsProvider {
             }
 
         };
+    }
+
+    private String getName(String input, ClassDef classDef) {
+        if (input.equals("named")) {
+            return "v" + version.replace(".", "_") + "/" + classDef.getName(input);
+        }
+        return classDef.getName(input);
     }
 
     private List<ClassDef> getClasses(String obfName, Direction direction) {
@@ -238,7 +253,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
         return name;
     }
 
-    private static class TinyRemapper extends Remapper {
+    private class TinyRemapper extends Remapper {
 
         private final Map<String, String> classNames = new HashMap<>();
         private final Map<EntryTriple, String> fieldNames = new HashMap<>();
@@ -246,20 +261,52 @@ public class YarnMappingsProvider implements IMappingsProvider {
 
         private TinyRemapper(TinyTree tree, String from, String to) {
             for (ClassDef clazz : tree.getClasses()) {
-                String className = clazz.getName(from);
-                classNames.put(className, clazz.getName(to));
-                for(FieldDef field : clazz.getFields()) {
-                    fieldNames.put(new EntryTriple(className, field.getName(from), ""), field.getName(to));
+                String classNameFrom = clazz.getName(from);
+                String classNameTo = clazz.getName(to);
+
+                if (tree.equals(namedTree)) {
+                    if (from.equals("named")) {
+                        classNameFrom = "v" + version.replace(".", "_") + "/" + classNameFrom;
+                    } else {
+                        classNameTo = "v" + version.replace(".", "_") + "/" + classNameTo;
+                    }
                 }
-                for(MethodDef method : clazz.getMethods()) {
-                    methodNames.put(new EntryTriple(className, method.getName(from), method.getDescriptor(from)), method.getName(to));
+
+                classNames.put(classNameFrom, classNameTo);
+
+                for(FieldDef field : clazz.getFields()) {
+                    fieldNames.put(new EntryTriple(classNameFrom, field.getName(from), ""), field.getName(to));
+                }
+                if (tree.equals(namedTree) && from.equals("named")) {
+                    Remapper descriptorRemapper = new Remapper() {
+                        @Override
+                        public String map(String name) {
+                            if (tree.getClasses().stream().anyMatch(classDef -> name.equals(classDef.getName("named")))) {
+                                return "v1_8_9/" + name;
+                            }
+                            return name;
+                        }
+                    };
+                    for(MethodDef method : clazz.getMethods()) {
+                        methodNames.put(new EntryTriple(classNameFrom, method.getName(from), descriptorRemapper.mapMethodDesc(method.getDescriptor(from))), method.getName(to));
+                    }
+                } else {
+                    for(MethodDef method : clazz.getMethods()) {
+                        methodNames.put(new EntryTriple(classNameFrom, method.getName(from), method.getDescriptor(from)), method.getName(to));
+                    }
                 }
             }
         }
 
         @Override
-        public String map(String typeName) {
-            return classNames.getOrDefault(typeName, typeName);
+        public String map(String name) {
+            if (classNames.containsKey(name)) {
+                return classNames.get(name);
+            } else if (name.contains("net/minecraft")) {
+                return "v" + version.replace(".", "_") + "/" + name;
+            } else {
+                return name;
+            }
         }
 
         @Override

@@ -14,6 +14,7 @@ import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class KilnStandardPlugin implements Plugin<Project> {
 
@@ -26,7 +27,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
     private Project project;
     private KilnStandardExtension extension;
 
-    private IMappingsProvider mappingsProvider;
+    private final List<IMappingsProvider> mappingsProviders = new ArrayList<>();
 
     @Override
     public void apply(Project project) {
@@ -34,6 +35,8 @@ public class KilnStandardPlugin implements Plugin<Project> {
         this.project = project;
 
         this.extension = project.getExtensions().create("kiln", KilnStandardExtension.class);
+
+        mappingsProviders.clear();
 
         project.getPlugins().apply("java-library");
 
@@ -67,12 +70,12 @@ public class KilnStandardPlugin implements Plugin<Project> {
         return project;
     }
 
-    public void setMappingsProvider(IMappingsProvider mappingsProvider) {
-        this.mappingsProvider = mappingsProvider;
+    public void addMappingsProvider(IMappingsProvider mappingsProvider) {
+        this.mappingsProviders.add(mappingsProvider);
     }
 
-    public IMappingsProvider getMappingsProvider() {
-        return mappingsProvider;
+    public List<IMappingsProvider> getMappingsProviders() {
+        return mappingsProviders;
     }
 
     private class ReobfuscateAction implements Action<Task> {
@@ -81,10 +84,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
         public void execute(Task task) {
             File classes = new File(project.getBuildDir(), "classes");
 
-            IMappingsProvider mappingsProvider = getMappingsProvider();
-            if(mappingsProvider == null) {
-                return;
-            }
+            List<IMappingsProvider> mappingsProviders = getMappingsProviders();
 
             Map<String, ClassNode> classNodes = new HashMap<>();
 
@@ -106,17 +106,51 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 }
             }
 
-            Remapper remapper = mappingsProvider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED);
-            Remapper realRemapper = new Remapper() {
+            List<Remapper> remappers = mappingsProviders.stream()
+                    .map(provider -> provider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED))
+                    .collect(Collectors.toList());
+
+            Remapper collectiveRemapper = new Remapper() {
 
                 @Override
                 public String map(String name) {
-                    return remapper.map(name);
+                    String newName = name;
+                    for (Remapper remapper : remappers) {
+                        newName = remapper.map(newName);
+                    }
+                    return newName;
                 }
 
                 @Override
                 public String mapFieldName(String owner, String name, String descriptor) {
-                    String newName = remapper.mapFieldName(owner, name, descriptor);
+                    String newName = name;
+                    for (Remapper remapper : remappers) {
+                        newName = remapper.mapFieldName(owner, newName, descriptor);
+                    }
+                    return newName;
+                }
+
+                @Override
+                public String mapMethodName(String owner, String name, String descriptor) {
+                    String newName = name;
+                    for (Remapper remapper : remappers) {
+                        newName = remapper.mapMethodName(owner, newName, descriptor);
+                    }
+                    return newName;
+                }
+
+            };
+
+            Remapper realRemapper = new Remapper() {
+
+                @Override
+                public String map(String name) {
+                    return collectiveRemapper.map(name);
+                }
+
+                @Override
+                public String mapFieldName(String owner, String name, String descriptor) {
+                    String newName = collectiveRemapper.mapFieldName(owner, name, descriptor);
                     if (newName.equals(name)) {
                         ClassNode classNode = classNodes.get(owner);
                         if (classNode != null) {
@@ -132,7 +166,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
                 @Override
                 public String mapMethodName(String owner, String name, String descriptor) {
-                    String newName = remapper.mapMethodName(owner, name, descriptor);
+                    String newName = collectiveRemapper.mapMethodName(owner, name, descriptor);
                     if (newName.equals(name)) {
                         ClassNode classNode = classNodes.get(owner);
                         if (classNode != null) {
@@ -170,28 +204,22 @@ public class KilnStandardPlugin implements Plugin<Project> {
                         }
                     }
 
-                    newValue = remapper.mapValue(newValue);
-
                     return newValue;
-                }
-
-                @Override
-                public String mapAnnotationAttributeName(String descriptor, String name) {
-                    return remapper.mapAnnotationAttributeName(descriptor, name);
                 }
             };
 
             for(CustomRemapper customRemapper : extension.remappers) {
-                customRemapper.setParent(remapper);
+                customRemapper.setParent(collectiveRemapper);
                 customRemapper.map(classNodes);
             }
 
-            for(Map.Entry<String, ClassNode> classNode : classNodes.entrySet()) {
+            for(Map.Entry<String, ClassNode> entry : classNodes.entrySet()) {
+                ClassNode classNode = entry.getValue();
                 ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
                 ClassVisitor visitor = new ClassRemapper(writer, realRemapper);
-                classNode.getValue().accept(visitor);
+                classNode.accept(visitor);
                 try {
-                    OutputStream outputStream = new FileOutputStream(new File(new File(classes, "java/main"), classNode.getKey() + ".class"));
+                    OutputStream outputStream = new FileOutputStream(new File(new File(classes, "java/main"), entry.getKey() + ".class"));
                     outputStream.write(writer.toByteArray());
                     outputStream.close();
                 } catch (IOException e) {
