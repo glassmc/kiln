@@ -181,20 +181,17 @@ public class YarnMappingsProvider implements IMappingsProvider {
         TinyRemapper initial = new TinyRemapper(direction == Direction.TO_NAMED ? this.intermediaryTree : this.namedTree, input, middle);
         TinyRemapper result = new TinyRemapper(direction == Direction.TO_NAMED ? this.namedTree : this.intermediaryTree, middle, output);
 
-        System.out.println("---");
-
         return new Remapper() {
 
             @Override
-            public String map(String internalName) {
-                return result.map(initial.map(internalName));
+            public String map(String name) {
+                return result.map(initial.map(name));
             }
 
             @Override
             public String mapMethodName(String owner, String name, String descriptor) {
                 for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
                     String newName = result.mapMethodName(classDef.getName(middle), initial.mapMethodName(getName(input, classDef), name, descriptor), initial.mapMethodDesc(descriptor));
-                    System.out.println(owner + " " + name + " " + newName + " " + initial.mapMethodName(getName(input, classDef), name, descriptor) + " " + getName(input, classDef));
                     if(!newName.equals(name)) {
                         return newName;
                     }
@@ -282,7 +279,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
                         @Override
                         public String map(String name) {
                             if (tree.getClasses().stream().anyMatch(classDef -> name.equals(classDef.getName("named")))) {
-                                return "v1_8_9/" + name;
+                                return "v" + version.replace(".", "_") + "/" + name;
                             }
                             return name;
                         }
@@ -302,7 +299,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
         public String map(String name) {
             if (classNames.containsKey(name)) {
                 return classNames.get(name);
-            } else if (name.contains("net/minecraft")) {
+            } else if (name.startsWith("net/minecraft")) {
                 return "v" + version.replace(".", "_") + "/" + name;
             } else {
                 return name;
