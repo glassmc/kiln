@@ -57,6 +57,9 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
         project.afterEvaluate(p -> {
             project.getTasks().findByName("compileJava").doLast(new ReobfuscateAction());
+            if (project.getTasks().findByName("compileKotlin") != null) {
+                project.getTasks().findByName("compileKotlin").doLast(new ReobfuscateAction());
+            }
         });
     }
 
@@ -87,6 +90,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
             List<IMappingsProvider> mappingsProviders = getMappingsProviders();
 
             Map<String, ClassNode> classNodes = new HashMap<>();
+            Map<String, File> classPaths = new HashMap<>();
 
             for(File file : project.fileTree(classes)) {
                 if(!file.getName().endsWith(".class")) {
@@ -99,7 +103,14 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     ClassNode classNode = new ClassNode();
                     classReader.accept(classNode, 0);
 
-                    classNodes.put(file.getAbsolutePath().replace(new File(classes, "java/main").getAbsolutePath() + "/", "").replace(".class", ""), classNode);
+                    String language = file.getAbsolutePath();
+                    language = language.substring(language.indexOf("classes/") + 8);
+                    language = language.substring(0, language.indexOf("/"));
+
+                    String className = file.getAbsolutePath().replace(new File(classes, language + "/main").getAbsolutePath() + "/", "").replace(".class", "");
+
+                    classNodes.put(className, classNode);
+                    classPaths.put(className, file);
                     inputStream.close();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -182,29 +193,33 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
                 @Override
                 public Object mapValue(Object value) {
-                    Object newValue = value;
-                    if(newValue instanceof String) {
-                        String valueString = (String) newValue;
-                        if ((valueString).contains("#") && (valueString).length() >= 6) {
-                            String[] classElementSplit = (valueString).split("#");
-                            String newName = this.map(classElementSplit[0]);
-                            if(classElementSplit[1].contains("(")) {
-                                String[] methodDescriptorSplit = classElementSplit[1].split("\\(");
-                                methodDescriptorSplit[1] = "(" + methodDescriptorSplit[1];
+                    try {
+                        Object newValue = value;
+                        if(newValue instanceof String) {
+                            String valueString = (String) newValue;
+                            if ((valueString).contains("#") && (valueString).length() >= 6) {
+                                String[] classElementSplit = (valueString).split("#");
+                                String newName = this.map(classElementSplit[0]);
+                                if(classElementSplit[1].contains("(")) {
+                                    String[] methodDescriptorSplit = classElementSplit[1].split("\\(");
+                                    methodDescriptorSplit[1] = "(" + methodDescriptorSplit[1];
 
-                                String newMethodName = this.mapMethodName(classElementSplit[0], methodDescriptorSplit[0], methodDescriptorSplit[1]);
-                                String newMethodDescription = this.mapMethodDesc(methodDescriptorSplit[1]);
-                                newValue =  newName + "#" + newMethodName + newMethodDescription;
+                                    String newMethodName = this.mapMethodName(classElementSplit[0], methodDescriptorSplit[0], methodDescriptorSplit[1]);
+                                    String newMethodDescription = this.mapMethodDesc(methodDescriptorSplit[1]);
+                                    newValue =  newName + "#" + newMethodName + newMethodDescription;
+                                } else {
+                                    String newFieldName = this.mapFieldName(classElementSplit[0], newName, "");
+                                    newValue =  newName + "#" + newFieldName;
+                                }
                             } else {
-                                String newFieldName = this.mapFieldName(classElementSplit[0], newName, "");
-                                newValue =  newName + "#" + newFieldName;
+                                newValue = this.map(valueString);
                             }
-                        } else {
-                            newValue = this.map(valueString);
                         }
-                    }
 
-                    return newValue;
+                        return newValue;
+                    } catch (Exception e) {
+                        return value;
+                    }
                 }
             };
 
@@ -219,7 +234,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 ClassVisitor visitor = new ClassRemapper(writer, realRemapper);
                 classNode.accept(visitor);
                 try {
-                    OutputStream outputStream = new FileOutputStream(new File(new File(classes, "java/main"), entry.getKey() + ".class"));
+                    OutputStream outputStream = new FileOutputStream(classPaths.get(entry.getKey()));
                     outputStream.write(writer.toByteArray());
                     outputStream.close();
                 } catch (IOException e) {
