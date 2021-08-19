@@ -202,7 +202,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
             @Override
             public String mapFieldName(String owner, String name, String descriptor) {
                 for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
-                    String newName = result.mapFieldName(classDef.getName(middle), initial.mapFieldName(getName(input, classDef), name, descriptor), initial.mapDesc(descriptor));
+                    String newName = result.mapFieldName(classDef.getName(middle), initial.mapFieldName(getName(input, classDef), name, ""), "");
                     if(!newName.equals(name)) {
                         return newName;
                     }

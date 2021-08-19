@@ -208,7 +208,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                                     String newMethodDescription = this.mapMethodDesc(methodDescriptorSplit[1]);
                                     newValue =  newName + "#" + newMethodName + newMethodDescription;
                                 } else {
-                                    String newFieldName = this.mapFieldName(classElementSplit[0], newName, "");
+                                    String newFieldName = this.mapFieldName(classElementSplit[0], classElementSplit[1], "");
                                     newValue =  newName + "#" + newFieldName;
                                 }
                             } else {
