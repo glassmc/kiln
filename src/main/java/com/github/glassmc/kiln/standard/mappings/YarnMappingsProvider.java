@@ -191,7 +191,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
             @Override
             public String mapMethodName(String owner, String name, String descriptor) {
                 for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
-                    String newName = result.mapMethodName(classDef.getName(middle), initial.mapMethodName(getName(input, classDef), name, descriptor), initial.mapMethodDesc(descriptor));
+                    String newName = result.mapMethodName(classDef == null ? owner.replace("v" + version.replace(".", "_") + "/", "") : classDef.getName(middle), initial.mapMethodName(classDef == null ? owner.replace("v" + version.replace(".", "_") + "/", "") : getName(input, classDef), name, descriptor), initial.mapMethodDesc(descriptor));
                     if(!newName.equals(name)) {
                         return newName;
                     }
@@ -225,11 +225,14 @@ public class YarnMappingsProvider implements IMappingsProvider {
 
         ClassDef classDef = this.intermediaryTree.getDefaultNamespaceClassMap().get(obfName);
         if(classDef != null) {
+            ClassDef toAdd;
             if(direction == Direction.TO_NAMED) {
-                parents.add(classDef);
-            } else if(direction == Direction.TO_OBFUSCATED) {
-                parents.add(this.namedTree.getDefaultNamespaceClassMap().get(classDef.getName("intermediary")));
+                toAdd = classDef;
+            } else {
+                toAdd = this.namedTree.getDefaultNamespaceClassMap().get(classDef.getName("intermediary"));
             }
+
+            parents.add(toAdd);
         }
 
         if(parentClasses.get(obfName) != null) {
@@ -299,6 +302,8 @@ public class YarnMappingsProvider implements IMappingsProvider {
         public String map(String name) {
             if (classNames.containsKey(name)) {
                 return classNames.get(name);
+            } else if(name.startsWith("v" + version.replace(".", "_") + "/net/minecraft/class_")) {
+                return name.replace("v" + version.replace(".", "_") + "/", "");
             } else if (name.startsWith("net/minecraft")) {
                 return "v" + version.replace(".", "_") + "/" + name;
             } else {

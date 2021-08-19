@@ -218,6 +218,8 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
                         return newValue;
                     } catch (Exception e) {
+                        System.out.println("err: " + value);
+                        e.printStackTrace();
                         return value;
                     }
                 }
