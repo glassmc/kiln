@@ -72,10 +72,6 @@ public class KilnMainPlugin implements Plugin<Project> {
         return childProjects;
     }
 
-    String getName(Project project) {
-        return project.getParent() != null ? getName(project.getParent()) + ':' + project.getName() : "";
-    }
-
     public File getCache() {
         File cache = new File(this.project.getGradle().getGradleUserHomeDir() + "/caches/kiln");
         cache.mkdirs();
