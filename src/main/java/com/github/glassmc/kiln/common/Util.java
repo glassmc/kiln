@@ -182,7 +182,7 @@ public class Util {
                 }
 
                 String url = classifiers.getJSONObject(nativesType).getString("url");
-                File downloadedJarFile = new File(versionNatives, library.getString("name") + ".jar");
+                File downloadedJarFile = new File(versionNatives, library.getString("name").replace(":", ";") + ".jar");
                 FileUtils.copyURLToFile(new URL(url), downloadedJarFile);
 
                 JarFile jarFile = new JarFile(downloadedJarFile);
