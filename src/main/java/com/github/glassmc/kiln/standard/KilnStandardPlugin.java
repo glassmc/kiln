@@ -104,7 +104,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     classReader.accept(classNode, 0);
 
                     String language = file.getAbsolutePath();
-                    language = language.substring(language.indexOf("classes/") + 8);
+                    language = language.substring(language.indexOf("classes/"));
                     language = language.substring(0, language.indexOf("/"));
 
                     String className = file.getAbsolutePath().replace(new File(classes, language + "/main").getAbsolutePath() + "/", "").replace(".class", "");
