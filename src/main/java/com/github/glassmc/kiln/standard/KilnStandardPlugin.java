@@ -104,7 +104,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     classReader.accept(classNode, 0);
 
                     String language = file.getAbsolutePath();
-                    language = language.replaceAll("\\", "/"); // Change path seperator for windows
+                    language = language.replace("\\", "/"); // Change path seperator for windows
                     language = language.substring(language.indexOf("classes/") + 8);
                     language = language.substring(0, language.indexOf("/"));
 
