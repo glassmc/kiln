@@ -43,13 +43,11 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
         this.setupShadowPlugin();
 
-        project.afterEvaluate(p -> {
-            project.getTasks().forEach(task -> {
-                if (task.getName().startsWith("compile")) {
-                    task.doLast(new ReobfuscateAction());
-                }
-            });
-        });
+        project.afterEvaluate(p -> p.getTasks().forEach(task -> {
+            if (task.getName().startsWith("compile")) {
+                task.doLast(new ReobfuscateAction());
+            }
+        }));
     }
 
     private void setupShadowPlugin() {
@@ -64,6 +62,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
         ShadowJar shadowJar = (ShadowJar) project.getTasks().getByName("shadowJar");
         shadowJar.getConfigurations().clear();
         shadowJar.getConfigurations().add(project.getConfigurations().getByName("shadowImplementation"));
+
         shadowJar.getConfigurations().add(project.getConfigurations().getByName("shadowApi"));
     }
 
@@ -158,42 +157,20 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
             Remapper realRemapper = new Remapper() {
 
-                /*@Override
+                @Override
                 public String map(String name) {
                     return collectiveRemapper.map(name);
                 }
 
                 @Override
                 public String mapFieldName(String owner, String name, String descriptor) {
-                    String newName = collectiveRemapper.mapFieldName(owner, name, descriptor);
-                    if (newName.equals(name)) {
-                        ClassNode classNode = classNodes.get(owner);
-                        if (classNode != null) {
-                            newName = this.mapFieldName(classNode.superName, newName, descriptor);
-
-                            for (String interfaceName : classNode.interfaces) {
-                                newName = this.mapFieldName(interfaceName, newName, descriptor);
-                            }
-                        }
-                    }
-                    return newName;
+                    return collectiveRemapper.mapFieldName(owner, name, descriptor);
                 }
 
                 @Override
-                public String mapMethodName(String owner, String name, String descriptor) {
-                    String newName = collectiveRemapper.mapMethodName(owner, name, descriptor);
-                    if (newName.equals(name)) {
-                        ClassNode classNode = classNodes.get(owner);
-                        if (classNode != null) {
-                            newName = this.mapMethodName(classNode.superName, newName, descriptor);
-
-                            for (String interfaceName : classNode.interfaces) {
-                                newName = this.mapMethodName(interfaceName, newName, descriptor);
-                            }
-                        }
-                    }
-                    return newName;
-                }*/
+                public String mapModuleName(String name) {
+                    return collectiveRemapper.mapModuleName(name);
+                }
 
                 @Override
                 public Object mapValue(Object value) {
