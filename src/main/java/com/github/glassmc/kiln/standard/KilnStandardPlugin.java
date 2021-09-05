@@ -18,13 +18,13 @@ import java.util.stream.Collectors;
 
 public class KilnStandardPlugin implements Plugin<Project> {
 
-    private static KilnStandardPlugin instance;
+    protected static KilnStandardPlugin instance;
 
     public static KilnStandardPlugin getInstance() {
         return instance;
     }
 
-    private Project project;
+    protected Project project;
     private KilnStandardExtension extension;
 
     private final List<IMappingsProvider> mappingsProviders = new ArrayList<>();
@@ -36,12 +36,23 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
         this.extension = project.getExtensions().create("kiln", KilnStandardExtension.class);
 
-        mappingsProviders.clear();
+        this.mappingsProviders.clear();
 
         project.getPlugins().apply("java-library");
-
         project.getTasks().getByName("compileJava").dependsOn(project.getTasks().getByName("processResources"));
 
+        this.setupShadowPlugin();
+
+        project.afterEvaluate(p -> {
+            project.getTasks().forEach(task -> {
+                if (task.getName().startsWith("compile")) {
+                    task.doLast(new ReobfuscateAction());
+                }
+            });
+        });
+    }
+
+    private void setupShadowPlugin() {
         project.getPlugins().apply("com.github.johnrengelman.shadow");
 
         Configuration shadowImplementation = project.getConfigurations().create("shadowImplementation");
@@ -54,17 +65,10 @@ public class KilnStandardPlugin implements Plugin<Project> {
         shadowJar.getConfigurations().clear();
         shadowJar.getConfigurations().add(project.getConfigurations().getByName("shadowImplementation"));
         shadowJar.getConfigurations().add(project.getConfigurations().getByName("shadowApi"));
-
-        project.afterEvaluate(p -> {
-            project.getTasks().findByName("compileJava").doLast(new ReobfuscateAction());
-            if (project.getTasks().findByName("compileKotlin") != null) {
-                project.getTasks().findByName("compileKotlin").doLast(new ReobfuscateAction());
-            }
-        });
     }
 
     public File getCache() {
-        File cache = new File(this.project.getGradle().getGradleUserHomeDir() + "/caches/kiln");
+        File cache = new File(this.project.getGradle().getGradleUserHomeDir() + File.separator + "caches" + File.separator + "kiln");
         cache.mkdirs();
         return cache;
     }
@@ -104,11 +108,10 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     classReader.accept(classNode, 0);
 
                     String language = file.getAbsolutePath();
-                    language = language.replace("\\", "/"); // Change path seperator for windows
-                    language = language.substring(language.indexOf("classes/") + 8);
-                    language = language.substring(0, language.indexOf("/"));
+                    language = language.substring(language.indexOf("classes" + File.separator) + 8);
+                    language = language.substring(0, language.indexOf(File.separator));
 
-                    String className = file.getAbsolutePath().replace(new File(classes, language + "/main").getAbsolutePath() + "/", "").replace(".class", "");
+                    String className = file.getAbsolutePath().replace(new File(classes, language + File.separator + "main").getAbsolutePath() + File.separator, "").replace(".class", "");
 
                     classNodes.put(className, classNode);
                     classPaths.put(className, file);
@@ -155,7 +158,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
             Remapper realRemapper = new Remapper() {
 
-                @Override
+                /*@Override
                 public String map(String name) {
                     return collectiveRemapper.map(name);
                 }
@@ -190,7 +193,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                         }
                     }
                     return newName;
-                }
+                }*/
 
                 @Override
                 public Object mapValue(Object value) {

@@ -3,7 +3,6 @@ package com.github.glassmc.kiln.main.task;
 import com.github.glassmc.kiln.main.KilnMainPlugin;
 import com.github.glassmc.kiln.common.Util;
 import com.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
-import org.apache.commons.io.FileUtils;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 
@@ -15,30 +14,30 @@ import java.util.Objects;
 
 public abstract class GenerateRunConfiguration extends DefaultTask {
 
-    private final String runConfigurationTemplate =
-            "<component name=\"ProjectRunConfigurationManager\">\n" +
-            "  <configuration default=\"false\" name=\"%s\" type=\"Application\" factoryName=\"Application\">\n" +
-            "    <option name=\"MAIN_CLASS_NAME\" value=\"%s\" />\n" +
-            "    <module name=\"%s\" />\n" +
-            "    <option name=\"PROGRAM_PARAMETERS\" value=\"%s\" />\n" +
-            "    <option name=\"VM_PARAMETERS\" value=\"%s\" />\n" +
-            "    <option name=\"WORKING_DIRECTORY\" value=\"run\" />\n" +
-            "    <method v=\"2\">\n" +
-            "      <option name=\"Gradle.BeforeRunTask\" enabled=\"true\" tasks=\"shadowJar\" externalProjectPath=\"$PROJECT_DIR$\" vmOptions=\"\" scriptParameters=\"\" />\n" +
-            "    </method>\n" +
-            "  </configuration>\n" +
-            "</component>";
-
     @TaskAction
     public void run() {
-        String environment = (String) this.getProject().getProperties().get("minecraftEnvironment");
-        String version = (String) this.getProject().getProperties().get("minecraftVersion");
+        String arguments = (String) this.getProject().getProperties().get("configuration");
+        String[] argumentsSplit = arguments.split(",");
 
+        String ide = argumentsSplit[0];
+        String environment = argumentsSplit[1];
+        String version = argumentsSplit[2];
+
+        switch (ide) {
+            case "idea":
+                generateIntelliJRunConfiguration(environment, version);
+                break;
+        }
+    }
+
+    private void generateIntelliJRunConfiguration(String environment, String version) {
         File runConfigurationsFile = new File(".idea/runConfigurations");
-        runConfigurationsFile.mkdirs();
+        if (!runConfigurationsFile.exists()) {
+            runConfigurationsFile.mkdirs();
+        }
 
         File pluginCache = KilnMainPlugin.getInstance().getCache();
-        File jar = Util.downloadMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider());
+        File jar = Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider());
         File dependencies = new File(jar.getParentFile(), "libraries");
         File natives = new File(jar.getParentFile(), "natives");
 
@@ -55,7 +54,20 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         String programArguments = "--accessToken 0 --version " + version + " --userProperties {}";
         String vmArguments = vmArgsBuilder.toString();
 
-        String runConfigurationData = String.format(this.runConfigurationTemplate, name, mainClass, module, programArguments, vmArguments);
+        String runConfigurationTemplate = "<component name=\"ProjectRunConfigurationManager\">\n" +
+                "  <configuration default=\"false\" name=\"%s\" type=\"Application\" factoryName=\"Application\">\n" +
+                "    <option name=\"MAIN_CLASS_NAME\" value=\"%s\" />\n" +
+                "    <module name=\"%s\" />\n" +
+                "    <option name=\"PROGRAM_PARAMETERS\" value=\"%s\" />\n" +
+                "    <option name=\"VM_PARAMETERS\" value=\"%s\" />\n" +
+                "    <option name=\"WORKING_DIRECTORY\" value=\"run\" />\n" +
+                "    <method v=\"2\">\n" +
+                "      <option name=\"Gradle.BeforeRunTask\" enabled=\"true\" tasks=\"shadowJar\" externalProjectPath=\"$PROJECT_DIR$\" vmOptions=\"\" scriptParameters=\"\" />\n" +
+                "    </method>\n" +
+                "  </configuration>\n" +
+                "</component>";
+
+        String runConfigurationData = String.format(runConfigurationTemplate, name, mainClass, module, programArguments, vmArguments);
 
         try {
             FileWriter fileWriter = new FileWriter(new File(runConfigurationsFile, name.replace(" ", "_").replace(".", "_") + ".xml"));
@@ -65,7 +77,8 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
             e.printStackTrace();
         }
 
-        new File("run").mkdirs();
+        File run = new File("run");
+        run.mkdirs();
     }
 
 }

@@ -36,14 +36,14 @@ public class DependencyHandlerExtension {
         }
         plugin.addMappingsProvider(mappingsProvider);
 
-        List<String> files = new ArrayList<>();
+        List<String> filesToDepend = new ArrayList<>();
 
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
         File versionMappedJARFile = new File(versionFile, id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
         File versionLibraries = new File(versionFile, "libraries");
 
-        Util.downloadMinecraft(id, version, pluginCache, new ObfuscatedMappingsProvider());
+        Util.setupMinecraft(id, version, pluginCache, new ObfuscatedMappingsProvider());
 
         try {
             mappingsProvider.setup(versionFile, version);
@@ -51,22 +51,20 @@ public class DependencyHandlerExtension {
             e.printStackTrace();
         }
 
-        Util.downloadMinecraft(id, version, pluginCache, mappingsProvider);
+        Util.setupMinecraft(id, version, pluginCache, mappingsProvider);
 
-        mappingsProvider.destroy();
-
-        files.add(versionMappedJARFile.getAbsolutePath());
+        filesToDepend.add(versionMappedJARFile.getAbsolutePath());
         for (File file : Objects.requireNonNull(versionLibraries.listFiles())) {
-            files.add(file.getAbsolutePath());
+            filesToDepend.add(file.getAbsolutePath());
         }
 
-        return plugin.getProject().files(files.toArray());
+        return plugin.getProject().files(filesToDepend.toArray());
     }
 
     public static FileCollection shard(String id, String version) {
         KilnStandardPlugin plugin = KilnStandardPlugin.getInstance();
 
-        File file = new File(plugin.getProject().getGradle().getGradleUserHomeDir() + "/caches/kiln/shard/" + id + "-" + version + ".jar");
+        File file = new File(plugin.getProject().getGradle().getGradleUserHomeDir() + File.separator + "caches" + File.separator + "kiln" + File.separator + "shard" + File.separator + id + "-" + version + ".jar");
         file.getParentFile().mkdirs();
 
         FileCollection files = plugin.getProject().files(file);

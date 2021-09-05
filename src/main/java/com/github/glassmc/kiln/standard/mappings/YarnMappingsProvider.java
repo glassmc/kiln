@@ -5,14 +5,12 @@ import net.fabricmc.mapping.util.EntryTriple;
 import org.apache.commons.io.FileUtils;
 import org.gradle.internal.Pair;
 import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -30,7 +28,10 @@ public class YarnMappingsProvider implements IMappingsProvider {
                     "https://maven.legacyfabric.net/net/fabricmc/intermediary/1.8.9/intermediary-1.8.9-v2.jar",
                     "https://maven.legacyfabric.net/net/fabricmc/yarn/1.8.9+build.202107080308/yarn-1.8.9+build.202107080308-v2.jar"
             ));
-            put("1.12.2", null);
+            put("1.12.2", Pair.of(
+                    "https://maven.legacyfabric.net/net/fabricmc/intermediary/1.12.2/intermediary-1.12.2-v2.jar",
+                    "https://maven.legacyfabric.net/net/fabricmc/yarn/1.12.2+build.202106280130/yarn-1.12.2+build.202106280130-v2.jar"
+            ));
             put("1.14", Pair.of(
                     "https://maven.fabricmc.net/net/fabricmc/intermediary/1.14/intermediary-1.14-v2.jar",
                     "https://maven.fabricmc.net/net/fabricmc/yarn/1.14+build.21/yarn-1.14+build.21-v2.jar"
@@ -168,11 +169,6 @@ public class YarnMappingsProvider implements IMappingsProvider {
     }
 
     @Override
-    public void destroy() {
-
-    }
-
-    @Override
     public Remapper getRemapper(Direction direction) {
         String input = direction == Direction.TO_NAMED ? "official" : "named";
         String middle = "intermediary";
@@ -191,7 +187,17 @@ public class YarnMappingsProvider implements IMappingsProvider {
             @Override
             public String mapMethodName(String owner, String name, String descriptor) {
                 for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
-                    String newName = result.mapMethodName(classDef == null ? owner.replace("v" + version.replace(".", "_") + "/", "") : classDef.getName(middle), initial.mapMethodName(classDef == null ? owner.replace("v" + version.replace(".", "_") + "/", "") : getName(input, classDef), name, descriptor), initial.mapMethodDesc(descriptor));
+                    String middleName;
+                    String initialName;
+                    if (classDef == null) {
+                        middleName = owner.replace("v" + version.replace(".", "_") + "/", "");
+                        initialName = owner.replace("v" + version.replace(".", "_") + "/", "");
+                    } else {
+                        middleName = classDef.getName(middle);
+                        initialName = getName(input, classDef);
+                    }
+
+                    String newName = result.mapMethodName(middleName, initial.mapMethodName(initialName, name, descriptor), initial.mapMethodDesc(descriptor));
                     if(!newName.equals(name)) {
                         return newName;
                     }
@@ -202,7 +208,17 @@ public class YarnMappingsProvider implements IMappingsProvider {
             @Override
             public String mapFieldName(String owner, String name, String descriptor) {
                 for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
-                    String newName = result.mapFieldName(classDef.getName(middle), initial.mapFieldName(getName(input, classDef), name, ""), "");
+                    String middleName;
+                    String initialName;
+                    if (classDef == null) {
+                        middleName = owner.replace("v" + version.replace(".", "_") + "/", "");
+                        initialName = owner.replace("v" + version.replace(".", "_") + "/", "");
+                    } else {
+                        middleName = classDef.getName(middle);
+                        initialName = getName(input, classDef);
+                    }
+
+                    String newName = result.mapFieldName(middleName, initial.mapFieldName(initialName, name, ""), "");
                     if(!newName.equals(name)) {
                         return newName;
                     }

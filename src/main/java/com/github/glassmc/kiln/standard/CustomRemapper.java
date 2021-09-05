@@ -17,7 +17,7 @@ public class CustomRemapper {
         this.parent = parent;
     }
 
-    public void map(Map<String, ClassNode> classNode) {
+    public void map(Map<String, ClassNode> classNodes) {
 
     }
 

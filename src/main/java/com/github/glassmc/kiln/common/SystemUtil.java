@@ -1,7 +1,5 @@
 package com.github.glassmc.kiln.common;
 
-import java.util.Locale;
-
 public class SystemUtil {
 
     public static OSType getOSType() {

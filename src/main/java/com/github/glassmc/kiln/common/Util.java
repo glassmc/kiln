@@ -23,7 +23,7 @@ import java.util.jar.JarOutputStream;
 
 public class Util {
 
-    public static File downloadMinecraft(String id, String version, File pluginCache, IMappingsProvider mappingsProvider) {
+    public static File setupMinecraft(String id, String version, File pluginCache, IMappingsProvider mappingsProvider) {
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
         File versionJARFile = new File(versionFile, id + "-" + version + ".jar");
@@ -128,9 +128,10 @@ public class Util {
 
             if (allowed) {
                 String artifactURL = downloads.getJSONObject("artifact").getString("url");
+                File libraryFile = new File(versionLibraries, artifactURL.substring(artifactURL.lastIndexOf("/") + 1));
                 FileUtils.copyURLToFile(
                         new URL(artifactURL),
-                        new File(versionLibraries, artifactURL.substring(artifactURL.lastIndexOf("/") + 1))
+                        libraryFile
                 );
             }
         }
