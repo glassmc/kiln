@@ -168,8 +168,8 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 }
 
                 @Override
-                public String mapModuleName(String name) {
-                    return collectiveRemapper.mapModuleName(name);
+                public String mapMethodName(String owner, String name, String descriptor) {
+                    return collectiveRemapper.mapMethodName(owner, name, descriptor);
                 }
 
                 @Override
