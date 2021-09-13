@@ -21,4 +21,8 @@ public class ObfuscatedMappingsProvider implements IMappingsProvider {
         return "obfuscated";
     }
 
+    @Override
+    public String getVersion() {
+        return null;
+    }
 }

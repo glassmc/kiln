@@ -120,35 +120,80 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 }
             }
 
-            List<Remapper> remappers = mappingsProviders.stream()
-                    .map(provider -> provider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED))
+            List<Map.Entry<IMappingsProvider, Remapper>> remappers = mappingsProviders.stream()
+                    .map(provider -> new AbstractMap.SimpleEntry<>(provider, provider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED)))
                     .collect(Collectors.toList());
+
+            /*Remapper versionRemover = new Remapper() {
+
+                @Override
+                public String map(String name) {
+                    if (name.startsWith("v")) {
+                        return name.substring(name.indexOf("/") + 1);
+                    } else {
+                        return name;
+                    }
+                }
+
+            };*/
 
             Remapper collectiveRemapper = new Remapper() {
 
                 @Override
                 public String map(String name) {
-                    String newName = name;
-                    for (Remapper remapper : remappers) {
-                        newName = remapper.map(newName);
+                    String newName;
+                    String nameVersion;
+                    if (name.startsWith("v")) {
+                        newName = name.substring(name.indexOf("/") + 1);
+                        nameVersion = name.substring(1, name.indexOf("/")).replace("_", ".");
+                    } else {
+                        newName = name;
+                        nameVersion = null;
+                    }
+                    for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
+                        if (remapper.getKey().getVersion().equals(nameVersion)) {
+                            newName = remapper.getValue().map(newName);
+                        }
                     }
                     return newName;
                 }
 
                 @Override
                 public String mapFieldName(String owner, String name, String descriptor) {
+                    String newOwner;
+                    String nameVersion;
+                    if (owner.startsWith("v")) {
+                        newOwner = owner.substring(owner.indexOf("/") + 1);
+                        nameVersion = owner.substring(1, owner.indexOf("/")).replace("_", ".");
+                    } else {
+                        newOwner = owner;
+                        nameVersion = null;
+                    }
                     String newName = name;
-                    for (Remapper remapper : remappers) {
-                        newName = remapper.mapFieldName(owner, newName, descriptor);
+                    for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
+                        if (remapper.getKey().getVersion().equals(nameVersion)) {
+                            newName = remapper.getValue().mapFieldName(newOwner, newName, descriptor);
+                        }
                     }
                     return newName;
                 }
 
                 @Override
                 public String mapMethodName(String owner, String name, String descriptor) {
+                    String newOwner;
+                    String nameVersion;
+                    if (owner.startsWith("v")) {
+                        newOwner = owner.substring(owner.indexOf("/") + 1);
+                        nameVersion = owner.substring(1, owner.indexOf("/")).replace("_", ".");
+                    } else {
+                        newOwner = owner;
+                        nameVersion = null;
+                    }
                     String newName = name;
-                    for (Remapper remapper : remappers) {
-                        newName = remapper.mapMethodName(owner, newName, descriptor);
+                    for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
+                        if (remapper.getKey().getVersion().equals(nameVersion)) {
+                            newName = remapper.getValue().mapMethodName(newOwner, newName, descriptor);
+                        }
                     }
                     return newName;
                 }
@@ -195,13 +240,10 @@ public class KilnStandardPlugin implements Plugin<Project> {
                             } else {
                                 newValue = this.map(valueString);
                             }
-
-                            System.out.println(newValue);
                         }
 
                         return newValue;
                     } catch (Exception e) {
-                        System.out.println("err: " + value);
                         e.printStackTrace();
                         return value;
                     }

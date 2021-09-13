@@ -99,10 +99,10 @@ public class YarnMappingsProvider implements IMappingsProvider {
         }
     };
 
-    private String version;
     private TinyTree namedTree;
     private TinyTree intermediaryTree;
     private Map<String, List<String>> parentClasses;
+    private String version;
 
     @Override
     public void setup(File minecraftFile, String version) throws NoSuchMappingsException {
@@ -187,15 +187,8 @@ public class YarnMappingsProvider implements IMappingsProvider {
             @Override
             public String mapMethodName(String owner, String name, String descriptor) {
                 for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
-                    String middleName;
-                    String initialName;
-                    if (classDef == null) {
-                        middleName = owner.replace("v" + version.replace(".", "_") + "/", "");
-                        initialName = owner.replace("v" + version.replace(".", "_") + "/", "");
-                    } else {
-                        middleName = classDef.getName(middle);
-                        initialName = getName(input, classDef);
-                    }
+                    String middleName = classDef.getName(middle);
+                    String initialName = classDef.getName(input);
 
                     String newName = result.mapMethodName(middleName, initial.mapMethodName(initialName, name, descriptor), initial.mapMethodDesc(descriptor));
                     if(!newName.equals(name)) {
@@ -208,15 +201,8 @@ public class YarnMappingsProvider implements IMappingsProvider {
             @Override
             public String mapFieldName(String owner, String name, String descriptor) {
                 for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
-                    String middleName;
-                    String initialName;
-                    if (classDef == null) {
-                        middleName = owner.replace("v" + version.replace(".", "_") + "/", "");
-                        initialName = owner.replace("v" + version.replace(".", "_") + "/", "");
-                    } else {
-                        middleName = classDef.getName(middle);
-                        initialName = getName(input, classDef);
-                    }
+                    String middleName = classDef.getName(middle);
+                    String initialName = classDef.getName(input);
 
                     String newName = result.mapFieldName(middleName, initial.mapFieldName(initialName, name, ""), "");
                     if(!newName.equals(name)) {
@@ -227,13 +213,6 @@ public class YarnMappingsProvider implements IMappingsProvider {
             }
 
         };
-    }
-
-    private String getName(String input, ClassDef classDef) {
-        if (input.equals("named")) {
-            return "v" + version.replace(".", "_") + "/" + classDef.getName(input);
-        }
-        return classDef.getName(input);
     }
 
     private List<ClassDef> getClasses(String obfName, Direction direction) {
@@ -269,7 +248,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
         return name;
     }
 
-    private class TinyRemapper extends Remapper {
+    private static class TinyRemapper extends Remapper {
 
         private final Map<String, String> classNames = new HashMap<>();
         private final Map<EntryTriple, String> fieldNames = new HashMap<>();
@@ -280,51 +259,20 @@ public class YarnMappingsProvider implements IMappingsProvider {
                 String classNameFrom = clazz.getName(from);
                 String classNameTo = clazz.getName(to);
 
-                if (tree.equals(namedTree)) {
-                    if (from.equals("named")) {
-                        classNameFrom = "v" + version.replace(".", "_") + "/" + classNameFrom;
-                    } else {
-                        classNameTo = "v" + version.replace(".", "_") + "/" + classNameTo;
-                    }
-                }
-
                 classNames.put(classNameFrom, classNameTo);
 
                 for(FieldDef field : clazz.getFields()) {
                     fieldNames.put(new EntryTriple(classNameFrom, field.getName(from), ""), field.getName(to));
                 }
-                if (tree.equals(namedTree) && from.equals("named")) {
-                    Remapper descriptorRemapper = new Remapper() {
-                        @Override
-                        public String map(String name) {
-                            if (tree.getClasses().stream().anyMatch(classDef -> name.equals(classDef.getName("named")))) {
-                                return "v" + version.replace(".", "_") + "/" + name;
-                            }
-                            return name;
-                        }
-                    };
-                    for(MethodDef method : clazz.getMethods()) {
-                        methodNames.put(new EntryTriple(classNameFrom, method.getName(from), descriptorRemapper.mapMethodDesc(method.getDescriptor(from))), method.getName(to));
-                    }
-                } else {
-                    for(MethodDef method : clazz.getMethods()) {
-                        methodNames.put(new EntryTriple(classNameFrom, method.getName(from), method.getDescriptor(from)), method.getName(to));
-                    }
+                for(MethodDef method : clazz.getMethods()) {
+                    methodNames.put(new EntryTriple(classNameFrom, method.getName(from), method.getDescriptor(from)), method.getName(to));
                 }
             }
         }
 
         @Override
         public String map(String name) {
-            if (classNames.containsKey(name)) {
-                return classNames.get(name);
-            } else if(name.startsWith("v" + version.replace(".", "_") + "/net/minecraft/class_")) {
-                return name.replace("v" + version.replace(".", "_") + "/", "");
-            } else if (name.startsWith("net/minecraft")) {
-                return "v" + version.replace(".", "_") + "/" + name;
-            } else {
-                return name;
-            }
+            return classNames.getOrDefault(name, name);
         }
 
         @Override
@@ -342,6 +290,11 @@ public class YarnMappingsProvider implements IMappingsProvider {
     @Override
     public String getID() {
         return "yarn";
+    }
+
+    @Override
+    public String getVersion() {
+        return this.version;
     }
 
 }

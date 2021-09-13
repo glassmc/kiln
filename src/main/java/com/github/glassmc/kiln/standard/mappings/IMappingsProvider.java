@@ -8,6 +8,7 @@ public interface IMappingsProvider {
     void setup(File minecraftFile, String version) throws NoSuchMappingsException;
     Remapper getRemapper(Direction direction);
     String getID();
+    String getVersion();
 
     enum Direction {
         TO_NAMED,

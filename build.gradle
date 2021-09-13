@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'com.github.glassmc'
-version '0.5.10'
+version '0.5.11'
 
 sourceCompatibility = targetCompatibility = 1.8
 

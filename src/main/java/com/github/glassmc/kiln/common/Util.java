@@ -55,11 +55,36 @@ public class Util {
 
                 URL versionJarURL = new URL(versionManifest.getJSONObject("downloads").getJSONObject(id).getString("url"));
                 FileUtils.copyURLToFile(versionJarURL, versionJARFile);
+                JarFile input = new JarFile(versionJARFile);
 
                 Remapper remapper = mappingsProvider.getRemapper(IMappingsProvider.Direction.TO_NAMED);
+
+                Remapper remapperWrapper = new Remapper() {
+
+                    @Override
+                    public String map(String name) {
+                        String mapped = remapper.map(name);
+                        if (input.getJarEntry(name + ".class") != null && mappingsProvider.getVersion() != null) {
+                            return "v" + version.replace(".", "_") + "/" + mapped;
+                        } else {
+                            return name;
+                        }
+                    }
+
+                    @Override
+                    public String mapFieldName(String owner, String name, String descriptor) {
+                        return remapper.mapFieldName(owner, name, descriptor);
+                    }
+
+                    @Override
+                    public String mapMethodName(String owner, String name, String descriptor) {
+                        return remapper.mapMethodName(owner, name, descriptor);
+                    }
+
+                };
+
                 JarOutputStream outputStream = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(versionMappedJARFile)));
 
-                JarFile input = new JarFile(versionJARFile);
                 Enumeration<JarEntry> entries = input.entries();
                 while(entries.hasMoreElements()) {
                     JarEntry entry = entries.nextElement();
@@ -67,10 +92,10 @@ public class Util {
                         if(entry.getName().endsWith(".class")) {
                             ClassReader classReader = new ClassReader(IOUtils.readFully(input.getInputStream(entry), (int) entry.getSize()));
                             ClassWriter writer = new ClassWriter(0);
-                            ClassVisitor visitor = new ClassRemapper(writer, remapper);
+                            ClassVisitor visitor = new ClassRemapper(writer, remapperWrapper);
                             classReader.accept(visitor, 0);
 
-                            outputStream.putNextEntry(new JarEntry(remapper.map(entry.getName().replace(".class", "")) + ".class"));
+                            outputStream.putNextEntry(new JarEntry(remapperWrapper.map(entry.getName().replace(".class", "")) + ".class"));
                             outputStream.write(writer.toByteArray());
                             outputStream.closeEntry();
                         } else if(!entry.getName().contains("META-INF")) {
