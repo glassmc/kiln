@@ -124,7 +124,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     .map(provider -> new AbstractMap.SimpleEntry<>(provider, provider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED)))
                     .collect(Collectors.toList());
 
-            /*Remapper versionRemover = new Remapper() {
+            Remapper versionRemover = new Remapper() {
 
                 @Override
                 public String map(String name) {
@@ -135,7 +135,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     }
                 }
 
-            };*/
+            };
 
             Remapper collectiveRemapper = new Remapper() {
 
@@ -192,7 +192,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     String newName = name;
                     for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
                         if (remapper.getKey().getVersion().equals(nameVersion)) {
-                            newName = remapper.getValue().mapMethodName(newOwner, newName, descriptor);
+                            newName = remapper.getValue().mapMethodName(newOwner, newName, versionRemover.mapDesc(descriptor));
                         }
                     }
                     return newName;
@@ -257,7 +257,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
             for(Map.Entry<String, ClassNode> entry : classNodes.entrySet()) {
                 ClassNode classNode = entry.getValue();
-                ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+                ClassWriter writer = new ClassWriter(0);
                 ClassVisitor visitor = new ClassRemapper(writer, realRemapper);
                 classNode.accept(visitor);
                 try {

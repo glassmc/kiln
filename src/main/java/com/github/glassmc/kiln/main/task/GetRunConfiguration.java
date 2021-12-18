@@ -13,8 +13,11 @@ public abstract class GetRunConfiguration extends DefaultTask {
 
     @TaskAction
     public void run() {
-        String environment = (String) this.getProject().getProperties().get("minecraftEnvironment");
-        String version = (String) this.getProject().getProperties().get("minecraftVersion");
+        String arguments = (String) this.getProject().getProperties().get("configuration");
+        String[] argumentsSplit = arguments.split(",");
+
+        String environment = argumentsSplit[0];
+        String version = argumentsSplit[1];
 
         File pluginCache = KilnMainPlugin.getInstance().getCache();
         File jar = Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider());
