@@ -137,6 +137,8 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
             };
 
+            Map<String, List<String>> classesMap = new HashMap<>();
+
             Remapper collectiveRemapper = new Remapper() {
 
                 @Override
@@ -180,19 +182,33 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
                 @Override
                 public String mapMethodName(String owner, String name, String descriptor) {
-                    String newOwner;
-                    String nameVersion;
-                    if (owner.startsWith("v")) {
-                        newOwner = owner.substring(owner.indexOf("/") + 1);
-                        nameVersion = owner.substring(1, owner.indexOf("/")).replace("_", ".");
-                    } else {
-                        newOwner = owner;
-                        nameVersion = null;
+                    List<String> parents = classesMap.get(owner);
+                    if (parents == null) {
+                        parents = new ArrayList<>();
                     }
+                    parents.add(owner);
+
+                    String nameVersion = null;
+                    for (String classString : new ArrayList<>(parents)) {
+                        if (classString.startsWith("v")) {
+                            String newClassString = classString.substring(classString.indexOf("/") + 1);
+                            parents.replaceAll(string -> {
+                                if (string.equals(classString)) {
+                                    return newClassString;
+                                }
+                                return classString;
+                            });
+                            nameVersion = classString.substring(1, classString.indexOf("/")).replace("_", ".");
+                        }
+                    }
+
                     String newName = name;
-                    for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
-                        if (remapper.getKey().getVersion().equals(nameVersion)) {
-                            newName = remapper.getValue().mapMethodName(newOwner, newName, versionRemover.mapDesc(descriptor));
+
+                    for (String classString : parents) {
+                        for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
+                            if (remapper.getKey().getVersion().equals(nameVersion)) {
+                                newName = remapper.getValue().mapMethodName(classString, newName, versionRemover.mapDesc(descriptor));
+                            }
                         }
                     }
                     return newName;
@@ -223,7 +239,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                         Object newValue = value;
                         if(newValue instanceof String && ((String) newValue).chars().allMatch(letter -> Character.isLetterOrDigit(letter) || "#_/();".contains(String.valueOf((char) letter)))) {
                             String valueString = (String) newValue;
-                            if ((valueString).contains("#") && (valueString).length() >= 6) {
+                            if (valueString.contains("#")) {
                                 String[] classElementSplit = (valueString).split("#");
                                 String newName = this.map(classElementSplit[0]);
                                 if(classElementSplit[1].contains("(")) {
@@ -237,6 +253,16 @@ public class KilnStandardPlugin implements Plugin<Project> {
                                     String newFieldName = this.mapFieldName(classElementSplit[0], classElementSplit[1], "");
                                     newValue =  newName + "#" + newFieldName;
                                 }
+                            } else if (valueString.startsWith("(")) {
+                                newValue = this.mapDesc(valueString);
+                            } else if (valueString.contains("(")) {
+                                String[] methodDescriptorSplit = valueString.split("\\(");
+                                methodDescriptorSplit[1] = "(" + methodDescriptorSplit[1];
+
+                                String newMethodName = methodDescriptorSplit[0];
+                                String newMethodDescription = this.mapMethodDesc(methodDescriptorSplit[1]);
+
+                                newValue = newMethodName + newMethodDescription;
                             } else {
                                 newValue = this.map(valueString);
                             }
@@ -244,7 +270,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
                         return newValue;
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        //e.printStackTrace();
                         return value;
                     }
                 }
@@ -253,6 +279,16 @@ public class KilnStandardPlugin implements Plugin<Project> {
             for(CustomRemapper customRemapper : extension.remappers) {
                 customRemapper.setParent(collectiveRemapper);
                 customRemapper.map(classNodes);
+            }
+
+            for(Map.Entry<String, ClassNode> entry : classNodes.entrySet()) {
+                ClassNode classNode = entry.getValue();
+
+                List<String> parents = new ArrayList<>();
+                parents.add(classNode.superName);
+                parents.addAll(classNode.interfaces);
+
+                classesMap.put(classNode.name, parents);
             }
 
             for(Map.Entry<String, ClassNode> entry : classNodes.entrySet()) {
