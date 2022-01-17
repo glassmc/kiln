@@ -49,9 +49,6 @@ public class HashRemapper extends Remapper {
         });
 
         fieldNames.forEach((key, value) -> {
-            System.out.println(new EntryTriple(classNames.get(key.getOwner()), value, remapDescriptor(key.getDescriptor())) + " -> " +
-                    key.getName());
-
             reverseFieldNames.put(
                     new EntryTriple(classNames.get(key.getOwner()), value, remapDescriptor(key.getDescriptor())),
                     key.getName());
@@ -80,24 +77,18 @@ public class HashRemapper extends Remapper {
         StringBuilder classBuilder = null;
         StringBuilder result = new StringBuilder();
 
-//        System.out.println(descriptor);
-
         for(char c : descriptor.toCharArray()) {
             if(c == ';' && classBuilder != null) {
                 result.append(remapDescriptor("L" + classBuilder.toString() + ";"));
-//                System.out.println("Ending with " + c);
                 classBuilder = null;
             } else if(c == 'L' && classBuilder == null) {
                 classBuilder = new StringBuilder();
-//                System.out.println("Beginning with " + c);
             } else {
                 if(classBuilder != null) {
                     classBuilder.append(c);
-//                    System.out.println("Appending " + c + " to class name");
                 }
                 else {
                     result.append(c);
-//                    System.out.println("Appending " + c);
                 }
             }
         }
