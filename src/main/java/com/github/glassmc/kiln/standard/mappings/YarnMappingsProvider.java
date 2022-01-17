@@ -8,6 +8,8 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.tree.ClassNode;
 
+import com.github.glassmc.kiln.standard.remmaper.TinyRemapper;
+
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -18,6 +20,7 @@ import java.util.zip.ZipEntry;
 
 public class YarnMappingsProvider implements IMappingsProvider {
 
+    // TODO Replace hard-coded build numbers, and scan maven-metadata.xml.
     private final Map<String, Pair<String, String>> mappings = new HashMap<String, Pair<String, String>>() {
         {
             put("1.7.10", Pair.of(
@@ -130,6 +133,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
             intermediaryURL = new URL(Objects.requireNonNull(mappingURLs.getLeft()));
             namedURL = new URL(Objects.requireNonNull(mappingURLs.getRight()));
         } catch (MalformedURLException e) {
+            // TODO log or wrap exception. IllegalStateException or Error should do fine.
             e.printStackTrace();
             return;
         }
@@ -149,8 +153,11 @@ public class YarnMappingsProvider implements IMappingsProvider {
 
                 JarFile intermediaryJARFile = new JarFile(intermediaryMappingsFile);
                 FileUtils.copyInputStreamToFile(intermediaryJARFile.getInputStream(new ZipEntry("mappings/mappings.tiny")), intermediaryMappings);
+                intermediaryJARFile.close();
+
                 JarFile namedJARFile = new JarFile(namedMappingsFile);
                 FileUtils.copyInputStreamToFile(namedJARFile.getInputStream(new ZipEntry("mappings/mappings.tiny")), namedMappings);
+                namedJARFile.close();
             }
 
             this.intermediaryTree = TinyMappingFactory.load(new BufferedReader(new FileReader(intermediaryMappings)));
@@ -182,8 +189,8 @@ public class YarnMappingsProvider implements IMappingsProvider {
         String middle = "intermediary";
         String output = direction == Direction.TO_NAMED ? "named" : "official";
 
-        TinyRemapper initial = new TinyRemapper(direction == Direction.TO_NAMED ? this.intermediaryTree : this.namedTree, input, middle);
-        TinyRemapper result = new TinyRemapper(direction == Direction.TO_NAMED ? this.namedTree : this.intermediaryTree, middle, output);
+        Remapper initial = TinyRemapper.create(direction == Direction.TO_NAMED ? this.intermediaryTree : this.namedTree, input, middle);
+        Remapper result = TinyRemapper.create(direction == Direction.TO_NAMED ? this.namedTree : this.intermediaryTree, middle, output);
 
         return new Remapper() {
 
@@ -191,7 +198,6 @@ public class YarnMappingsProvider implements IMappingsProvider {
             public String map(String name) {
                 return result.map(initial.map(name));
             }
-
             @Override
             public String mapMethodName(String owner, String name, String descriptor) {
                 for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
@@ -254,45 +260,6 @@ public class YarnMappingsProvider implements IMappingsProvider {
             return result.map(initial.map(name));
         }
         return name;
-    }
-
-    private static class TinyRemapper extends Remapper {
-
-        private final Map<String, String> classNames = new HashMap<>();
-        private final Map<EntryTriple, String> fieldNames = new HashMap<>();
-        private final Map<EntryTriple, String> methodNames = new HashMap<>();
-
-        private TinyRemapper(TinyTree tree, String from, String to) {
-            for (ClassDef clazz : tree.getClasses()) {
-                String classNameFrom = clazz.getName(from);
-                String classNameTo = clazz.getName(to);
-
-                classNames.put(classNameFrom, classNameTo);
-
-                for(FieldDef field : clazz.getFields()) {
-                    fieldNames.put(new EntryTriple(classNameFrom, field.getName(from), ""), field.getName(to));
-                }
-                for(MethodDef method : clazz.getMethods()) {
-                    methodNames.put(new EntryTriple(classNameFrom, method.getName(from), method.getDescriptor(from)), method.getName(to));
-                }
-            }
-        }
-
-        @Override
-        public String map(String name) {
-            return classNames.getOrDefault(name, name);
-        }
-
-        @Override
-        public String mapFieldName(final String owner, final String name, final String descriptor) {
-            return fieldNames.getOrDefault(new EntryTriple(owner, name, ""), name);
-        }
-
-        @Override
-        public String mapMethodName(final String owner, final String name, final String descriptor) {
-            return methodNames.getOrDefault(new EntryTriple(owner, name, descriptor), name);
-        }
-
     }
 
     @Override
