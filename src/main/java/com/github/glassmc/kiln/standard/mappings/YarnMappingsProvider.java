@@ -8,7 +8,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.tree.ClassNode;
 
-import com.github.glassmc.kiln.standard.remmaper.TinyRemapper;
+import com.github.glassmc.kiln.standard.remapper.TinyRemapper;
 
 import java.io.*;
 import java.net.MalformedURLException;

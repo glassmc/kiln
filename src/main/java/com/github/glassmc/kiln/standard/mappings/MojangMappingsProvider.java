@@ -8,8 +8,8 @@ import org.json.JSONObject;
 import org.objectweb.asm.commons.Remapper;
 
 import com.github.glassmc.kiln.common.Util;
-import com.github.glassmc.kiln.standard.remmaper.HashRemapper;
-import com.github.glassmc.kiln.standard.remmaper.ProGuardRemapper;
+import com.github.glassmc.kiln.standard.remapper.HashRemapper;
+import com.github.glassmc.kiln.standard.remapper.ProGuardRemapper;
 
 import shadow.com.gradle.publish.plugin.dep.org.apache.commons.io.FileUtils;
 

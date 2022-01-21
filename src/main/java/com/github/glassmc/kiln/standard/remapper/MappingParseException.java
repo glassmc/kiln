@@ -1,4 +1,4 @@
-package com.github.glassmc.kiln.standard.remmaper;
+package com.github.glassmc.kiln.standard.remapper;
 
 public class MappingParseException extends RuntimeException {
 
