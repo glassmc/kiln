@@ -4,14 +4,13 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 
+import org.apache.commons.io.FileUtils;
 import org.json.JSONObject;
 import org.objectweb.asm.commons.Remapper;
 
 import com.github.glassmc.kiln.common.Util;
 import com.github.glassmc.kiln.standard.remapper.HashRemapper;
 import com.github.glassmc.kiln.standard.remapper.ProGuardRemapper;
-
-import shadow.com.gradle.publish.plugin.dep.org.apache.commons.io.FileUtils;
 
 public class MojangMappingsProvider implements IMappingsProvider {
 
@@ -37,7 +36,7 @@ public class MojangMappingsProvider implements IMappingsProvider {
 
             URL mappingsURL = new URL(downloads.getJSONObject("client_mappings").getString("url"));
 
-            File mappingsFile = new File(temp, "mappings.proguard.txt");
+            File mappingsFile = new File(temp, "mojang-mappings-" + version + ".txt");
             FileUtils.copyURLToFile(mappingsURL, mappingsFile);
 
             obfuscator = ProGuardRemapper.create(mappingsFile);
