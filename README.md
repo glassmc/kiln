@@ -8,7 +8,7 @@ Gradle plugin to aid in the development of shards.
  - [x] Deobfuscating Minecraft
    - [x] Yarn Mappings (Mostly)
    - [ ] MCP Mappings
-   - [x] Mojang Mappings (Without intermediary support)
+   - [x] Mojang Mappings
    - [ ] Sand Mappings? (Custom GlassMC Mappings)
  - [x] Depending On Shards
    - [x] Shard Dependencies
