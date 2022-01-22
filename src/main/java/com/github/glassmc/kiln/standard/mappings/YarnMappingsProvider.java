@@ -96,7 +96,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
             ));
             put("1.17.1", Pair.of(
                     "https://maven.fabricmc.net/net/fabricmc/intermediary/1.17.1/intermediary-1.17.1-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.17.1+build.10/yarn-1.17.1+build.65-v2.jar"
+                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.17.1+build.65/yarn-1.17.1+build.65-v2.jar"
             ));
             put("1.18", Pair.of(
                     "https://maven.fabricmc.net/net/fabricmc/intermediary/1.18/intermediary-1.18-v2.jar",
