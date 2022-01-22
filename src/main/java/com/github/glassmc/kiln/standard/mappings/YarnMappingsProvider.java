@@ -1,7 +1,6 @@
 package com.github.glassmc.kiln.standard.mappings;
 
 import net.fabricmc.mapping.tree.*;
-import net.fabricmc.mapping.util.EntryTriple;
 import org.apache.commons.io.FileUtils;
 import org.gradle.internal.Pair;
 import org.objectweb.asm.ClassReader;
@@ -204,7 +203,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
                     String middleName = classDef.getName(middle);
                     String initialName = classDef.getName(input);
 
-                    String newName = result.mapMethodName(middleName, initial.mapMethodName(initialName, name, descriptor), initial.mapMethodDesc(descriptor));
+                    String newName = result.mapMethodName(middleName, initial.mapMethodName(initialName, name, descriptor), initial.mapDesc(descriptor));
                     if(!newName.equals(name)) {
                         return newName;
                     }

@@ -15,7 +15,6 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -26,7 +25,7 @@ import java.util.jar.JarOutputStream;
 public class Util {
 
     private static JSONObject versions;
-    private static Map<String, JSONObject> versionsById = new HashMap<>();
+    private static final Map<String, JSONObject> versionsById = new HashMap<>();
 
     public static File setupMinecraft(String id, String version, File pluginCache, IMappingsProvider mappingsProvider) {
         File minecraftFile = new File(pluginCache, "minecraft");

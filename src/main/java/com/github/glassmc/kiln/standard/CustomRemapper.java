@@ -5,10 +5,11 @@ import org.objectweb.asm.tree.ClassNode;
 
 import java.util.Map;
 
-public class CustomRemapper {
+public abstract class CustomRemapper {
 
     private Remapper parent;
 
+    @SuppressWarnings("unused")
     public Remapper getParent() {
         return parent;
     }
@@ -17,8 +18,6 @@ public class CustomRemapper {
         this.parent = parent;
     }
 
-    public void map(Map<String, ClassNode> classNodes) {
-
-    }
+    public abstract void map(Map<String, ClassNode> classNodes);
 
 }

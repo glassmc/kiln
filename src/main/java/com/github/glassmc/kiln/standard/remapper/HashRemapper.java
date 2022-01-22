@@ -13,10 +13,6 @@ public class HashRemapper extends Remapper {
     protected Map<EntryTriple, String> fieldNames;
     protected Map<EntryTriple, String> methodNames;
 
-    public HashRemapper() {
-        this(new HashMap<>(), new HashMap<>(), new HashMap<>());
-    }
-
     public HashRemapper(Map<String, String> classNames, Map<EntryTriple, String> fieldNames,
             Map<EntryTriple, String> methodNames) {
         this.classNames = classNames;
@@ -44,21 +40,15 @@ public class HashRemapper extends Remapper {
         Map<EntryTriple, String> reverseFieldNames = new HashMap<>();
         Map<EntryTriple, String> reverseMethodNames = new HashMap<>();
 
-        classNames.forEach((key, value) -> {
-            reverseClassNames.put(value, key);
-        });
+        classNames.forEach((key, value) -> reverseClassNames.put(value, key));
 
-        fieldNames.forEach((key, value) -> {
-            reverseFieldNames.put(
-                    new EntryTriple(classNames.get(key.getOwner()), value, remapDescriptor(key.getDescriptor())),
-                    key.getName());
-        });
+        fieldNames.forEach((key, value) -> reverseFieldNames.put(
+                new EntryTriple(classNames.get(key.getOwner()), value, remapDescriptor(key.getDescriptor())),
+                key.getName()));
 
-        methodNames.forEach((key, value) -> {
-            reverseMethodNames.put(
-                    new EntryTriple(classNames.get(key.getOwner()), value, remapFullDescriptor(key.getDescriptor())),
-                    key.getName());
-        });
+        methodNames.forEach((key, value) -> reverseMethodNames.put(
+                new EntryTriple(classNames.get(key.getOwner()), value, remapFullDescriptor(key.getDescriptor())),
+                key.getName()));
 
         return new HashRemapper(reverseClassNames, reverseFieldNames, reverseMethodNames);
     }
@@ -79,7 +69,7 @@ public class HashRemapper extends Remapper {
 
         for(char c : descriptor.toCharArray()) {
             if(c == ';' && classBuilder != null) {
-                result.append(remapDescriptor("L" + classBuilder.toString() + ";"));
+                result.append(remapDescriptor("L" + classBuilder + ";"));
                 classBuilder = null;
             } else if(c == 'L' && classBuilder == null) {
                 classBuilder = new StringBuilder();

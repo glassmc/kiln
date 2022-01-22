@@ -128,7 +128,7 @@ public class ProGuardRemapper {
             descriptor.append("V");
             break;
         default:
-            descriptor.append("L" + type.replace(".", "/") + ";");
+            descriptor.append("L").append(type.replace(".", "/")).append(";");
             break;
         }
 
