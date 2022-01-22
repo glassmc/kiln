@@ -5,6 +5,7 @@ import com.github.glassmc.kiln.common.Util;
 import com.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -54,6 +55,15 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         String mainClass = environment.equals("client") ? "com.github.glassmc.loader.client.GlassClientMain" : "com.github.glassmc.loader.server.GlassServerMain";
         String module = getProject().getRootProject().getName() + ".main";
         String programArguments = "--accessToken 0 --version " + version + " --userProperties {}";
+
+        try {
+            JSONObject versionManifest = Util.getVersionManifest(version);
+            String id = versionManifest.getJSONObject("assetIndex").getString("id");
+            programArguments = programArguments + " --assetIndex " + id;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         String vmArguments = vmArgsBuilder.toString();
 
         String runConfigurationTemplate = "<component name=\"ProjectRunConfigurationManager\">\n" +

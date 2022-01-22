@@ -1,5 +1,6 @@
 package com.github.glassmc.kiln.common;
 
+import com.github.glassmc.kiln.standard.KilnStandardPlugin;
 import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -15,6 +16,7 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -40,10 +42,11 @@ public class Util {
                 if(id.equals("client")) {
                     File versionLibraries = new File(versionFile, "libraries");
                     File versionNatives = new File(versionFile, "natives");
+                    File assets = new File(KilnStandardPlugin.getInstance().getProject().getProjectDir(), "run/assets");
 
                     downloadLibraries(versionManifest, versionLibraries);
-
                     downloadNatives(versionManifest, versionNatives);
+                    downloadAssets(versionManifest, assets);
                 }
 
                 URL versionJarURL = new URL(versionManifest.getJSONObject("downloads").getJSONObject(id).getString("url"));
@@ -105,6 +108,33 @@ public class Util {
         }
 
         return versionMappedJARFile;
+    }
+
+    private static void downloadAssets(JSONObject versionManifest, File assets) {
+        String id = versionManifest.getJSONObject("assetIndex").getString("id");
+        String assetIndexUrl = versionManifest.getJSONObject("assetIndex").getString("url");
+        try {
+            File file = new File(assets, "indexes/" + id + ".json");
+            file.getParentFile().mkdirs();
+            FileUtils.copyURLToFile(new URL(assetIndexUrl), file);
+
+            String fileContents = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+            JSONObject json = new JSONObject(fileContents);
+
+            JSONObject objects = json.getJSONObject("objects");
+
+            File objectsFile = new File(assets, "objects");
+            objectsFile.mkdirs();
+
+            String url = "http://resources.download.minecraft.net";
+            for (Map.Entry<String, Object> entry : objects.toMap().entrySet()) {
+                Map<String, Object> value = (Map<String, Object>) entry.getValue();
+                String hash = (String) value.get("hash");
+                FileUtils.copyURLToFile(new URL(url + "/" + hash.substring(0, 2) + "/" + hash), new File(objectsFile, hash.substring(0, 2) + "/" + hash));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static JSONObject getVersionManifest(String id) throws JSONException, IOException {
