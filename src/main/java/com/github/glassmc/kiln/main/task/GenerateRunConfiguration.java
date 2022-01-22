@@ -42,10 +42,12 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         File natives = new File(jar.getParentFile(), "natives");
 
         StringBuilder vmArgsBuilder = new StringBuilder();
-        vmArgsBuilder.append("-Xbootclasspath/a:").append(jar.getAbsolutePath()).append(File.pathSeparator);
+        vmArgsBuilder.append("-cp ").append(jar.getAbsolutePath()).append(File.pathSeparator);
         for(File dependency : Objects.requireNonNull(dependencies.listFiles())) {
             vmArgsBuilder.append(dependency.getAbsolutePath()).append(File.pathSeparator);
         }
+        vmArgsBuilder.append("$Classpath$");
+
         vmArgsBuilder.append(" -Djava.library.path=").append(natives.getAbsolutePath());
 
         String name = environment.substring(0, 1).toUpperCase(Locale.ROOT) + environment.substring(1) + " " + version;
