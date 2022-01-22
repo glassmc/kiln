@@ -3,6 +3,7 @@ package com.github.glassmc.kiln.common;
 import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -14,6 +15,7 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -23,6 +25,9 @@ import java.util.jar.JarOutputStream;
 
 public class Util {
 
+    private static JSONObject versions;
+    private static Map<String, JSONObject> versionsById = new HashMap<>();
+
     public static File setupMinecraft(String id, String version, File pluginCache, IMappingsProvider mappingsProvider) {
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
@@ -31,18 +36,7 @@ public class Util {
 
         if (!versionMappedJARFile.exists()) {
             try {
-                URL versionsURL = new URL("https://launchermeta.mojang.com/mc/game/version_manifest.json");
-                JSONObject versions = new JSONObject(IOUtils.toString(versionsURL, StandardCharsets.UTF_8));
-                JSONObject versionInfo = new JSONObject();
-                for(Object info : versions.getJSONArray("versions")) {
-                    if(((JSONObject) info).getString("id").equals(version)) {
-                        versionInfo = (JSONObject) info;
-                    }
-                }
-
-                String versionManifestString = versionInfo.getString("url");
-                URL versionManifestURL = new URL(versionManifestString);
-                JSONObject versionManifest = new JSONObject(IOUtils.toString(versionManifestURL, StandardCharsets.UTF_8));
+                JSONObject versionManifest = getVersionManifest(version);
 
                 if(id.equals("client")) {
                     File versionLibraries = new File(versionFile, "libraries");
@@ -112,6 +106,32 @@ public class Util {
         }
 
         return versionMappedJARFile;
+    }
+
+    public static JSONObject getVersionManifest(String id) throws JSONException, IOException {
+        if(versions == null) {
+            URL versionsURL = new URL("https://launchermeta.mojang.com/mc/game/version_manifest.json");
+            versions = new JSONObject(IOUtils.toString(versionsURL, StandardCharsets.UTF_8));
+        }
+
+        if(versionsById.containsKey(id)) {
+            return versionsById.get(id);
+        }
+
+        JSONObject versionInfo = new JSONObject();
+        for(Object info : versions.getJSONArray("versions")) {
+            if(((JSONObject) info).getString("id").equals(id)) {
+                versionInfo = (JSONObject) info;
+            }
+        }
+
+        String versionManifestString = versionInfo.getString("url");
+        URL versionManifestURL = new URL(versionManifestString);
+        JSONObject versionManifest = new JSONObject(IOUtils.toString(versionManifestURL, StandardCharsets.UTF_8));
+
+        versionsById.put(id, versionManifest);
+
+        return versionManifest;
     }
 
     private static void downloadLibraries(JSONObject versionManifest, File versionLibraries) throws IOException {
