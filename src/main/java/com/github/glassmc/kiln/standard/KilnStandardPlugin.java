@@ -14,6 +14,9 @@ import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
 import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.jar.JarOutputStream;
 import java.util.stream.Collectors;
 
 public class KilnStandardPlugin implements Plugin<Project> {
@@ -44,7 +47,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
         this.setupShadowPlugin();
 
         project.afterEvaluate(p -> p.getTasks().forEach(task -> {
-            if (task.getName().startsWith("compile")) {
+            if (task.getName().equals("shadowJar")) {
                 task.doLast(new ReobfuscateAction());
             }
         }));
@@ -95,7 +98,27 @@ public class KilnStandardPlugin implements Plugin<Project> {
             Map<String, ClassNode> classNodes = new HashMap<>();
             Map<String, File> classPaths = new HashMap<>();
 
-            for(File file : project.fileTree(classes)) {
+            try {
+                JarFile jarFile = new JarFile(new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar"));
+                Enumeration<JarEntry> entries = jarFile.entries();
+
+                while (entries.hasMoreElements()) {
+                    JarEntry entry = entries.nextElement();
+
+                    if (entry.getName().endsWith(".class")) {
+                        InputStream inputStream = jarFile.getInputStream(entry);
+                        ClassReader classReader = new ClassReader(IOUtils.readFully(inputStream, inputStream.available()));
+                        ClassNode classNode = new ClassNode();
+                        classReader.accept(classNode, 0);
+
+                        classNodes.put(classNode.name, classNode);
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            /*for(File file : project.fileTree(classes)) {
                 if(!file.getName().endsWith(".class")) {
                     continue;
                 }
@@ -118,7 +141,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-            }
+            }*/
 
             List<Map.Entry<IMappingsProvider, Remapper>> remappers = mappingsProviders.stream()
                     .map(provider -> new AbstractMap.SimpleEntry<>(provider, provider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED)))
@@ -291,7 +314,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 classesMap.put(classNode.name, parents);
             }
 
-            for(Map.Entry<String, ClassNode> entry : classNodes.entrySet()) {
+            /*for(Map.Entry<String, ClassNode> entry : classNodes.entrySet()) {
                 ClassNode classNode = entry.getValue();
                 ClassWriter writer = new ClassWriter(0);
                 ClassVisitor visitor = new ClassRemapper(writer, realRemapper);
@@ -303,6 +326,28 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+            }*/
+
+            try {
+                JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(new File(project.getBuildDir(), "libs/" + project.getName() + "-mapped.jar")));
+
+                for(Map.Entry<String, ClassNode> entry : classNodes.entrySet()) {
+                    ClassNode classNode = entry.getValue();
+                    ClassWriter writer = new ClassWriter(0);
+                    ClassVisitor visitor = new ClassRemapper(writer, realRemapper);
+                    classNode.accept(visitor);
+                    try {
+                        jarOutputStream.putNextEntry(new JarEntry(entry.getKey() + ".class"));
+                        jarOutputStream.write(writer.toByteArray());
+                        jarOutputStream.closeEntry();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                jarOutputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
 

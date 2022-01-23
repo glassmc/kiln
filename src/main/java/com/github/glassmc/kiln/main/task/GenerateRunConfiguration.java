@@ -47,6 +47,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         for(File dependency : Objects.requireNonNull(dependencies.listFiles())) {
             vmArgsBuilder.append(dependency.getAbsolutePath()).append(File.pathSeparator);
         }
+        vmArgsBuilder.append(new File(this.getProject().getBuildDir(), "libs/" + this.getProject().getName() + "-mapped.jar").getAbsolutePath()).append(File.pathSeparator);
         vmArgsBuilder.append("$Classpath$");
 
         vmArgsBuilder.append(" -Djava.library.path=").append(natives.getAbsolutePath());
