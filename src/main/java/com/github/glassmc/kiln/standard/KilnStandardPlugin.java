@@ -5,9 +5,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar;
 import org.apache.commons.io.IOUtils;
 import org.gradle.api.*;
 import org.gradle.api.artifacts.Configuration;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.*;
 import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.tree.ClassNode;
@@ -96,7 +94,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
             List<IMappingsProvider> mappingsProviders = getMappingsProviders();
 
             Map<String, ClassNode> classNodes = new HashMap<>();
-            Map<String, File> classPaths = new HashMap<>();
+            Map<String, byte[]> resources = new HashMap<>();
 
             try {
                 JarFile jarFile = new JarFile(new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar"));
@@ -112,6 +110,9 @@ public class KilnStandardPlugin implements Plugin<Project> {
                         classReader.accept(classNode, 0);
 
                         classNodes.put(classNode.name, classNode);
+                    } else {
+                        InputStream inputStream = jarFile.getInputStream(entry);
+                        resources.put(entry.getName(), IOUtils.readFully(inputStream, inputStream.available()));
                     }
                 }
             } catch (IOException e) {
@@ -258,8 +259,8 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
                 @Override
                 public Object mapValue(Object value) {
+                    Object newValue = value;
                     try {
-                        Object newValue = value;
                         if(newValue instanceof String && ((String) newValue).chars().allMatch(letter -> Character.isLetterOrDigit(letter) || "#_/();".contains(String.valueOf((char) letter)))) {
                             String valueString = (String) newValue;
                             if (valueString.contains("#")) {
@@ -290,12 +291,27 @@ public class KilnStandardPlugin implements Plugin<Project> {
                                 newValue = this.map(valueString);
                             }
                         }
-
-                        return newValue;
-                    } catch (Exception e) {
+                    } catch (Exception ignored) {
                         //e.printStackTrace();
-                        return value;
                     }
+
+                    try {
+                        if (value instanceof Type) {
+                            newValue = Type.getType(this.mapDesc(((Type) value).getDescriptor()));
+                        }
+
+                        if (value instanceof Handle) {
+                            Handle handle = (Handle) value;
+                            newValue = new Handle(handle.getTag(), handle.getOwner(), handle.getName(), this.mapDesc(handle.getDesc()), handle.isInterface());
+                            //System.out.println(handle.getName() + " " + handle.getDesc() + " " + handle.getOwner());
+                        }
+                    } catch(Exception ignored) {
+
+                    }
+
+                    System.out.println(newValue);
+
+                    return newValue;
                 }
             };
 
@@ -343,6 +359,12 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
+                }
+
+                for (Map.Entry<String, byte[]> entry : resources.entrySet()) {
+                    jarOutputStream.putNextEntry(new JarEntry(entry.getKey()));
+                    jarOutputStream.write(entry.getValue());
+                    jarOutputStream.closeEntry();
                 }
 
                 jarOutputStream.close();
