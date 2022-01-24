@@ -97,7 +97,11 @@ public class KilnStandardPlugin implements Plugin<Project> {
             Map<String, byte[]> resources = new HashMap<>();
 
             try {
-                JarFile jarFile = new JarFile(new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar"));
+                File file = new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar");
+                if (!file.exists()) {
+                    file = new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all.jar");
+                }
+                JarFile jarFile = new JarFile(file);
                 Enumeration<JarEntry> entries = jarFile.entries();
 
                 while (entries.hasMoreElements()) {
@@ -303,13 +307,10 @@ public class KilnStandardPlugin implements Plugin<Project> {
                         if (value instanceof Handle) {
                             Handle handle = (Handle) value;
                             newValue = new Handle(handle.getTag(), handle.getOwner(), handle.getName(), this.mapDesc(handle.getDesc()), handle.isInterface());
-                            //System.out.println(handle.getName() + " " + handle.getDesc() + " " + handle.getOwner());
                         }
                     } catch(Exception ignored) {
 
                     }
-
-                    System.out.println(newValue);
 
                     return newValue;
                 }
