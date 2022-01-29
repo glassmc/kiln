@@ -41,7 +41,7 @@ public class Util {
                 if(id.equals("client")) {
                     File versionLibraries = new File(versionFile, "libraries");
                     File versionNatives = new File(versionFile, "natives");
-                    File assets = new File(KilnStandardPlugin.getInstance().getProject().getProjectDir(), "run/assets");
+                    File assets = new File(versionFile, "assets");
 
                     downloadLibraries(versionManifest, versionLibraries);
                     downloadNatives(versionManifest, versionNatives);
