@@ -26,6 +26,7 @@ dependencies {
     implementation 'com.github.johnrengelman:shadow:7.0.0'
 
     implementation 'com.github.fabricmc:tiny-mappings-parser:750be4e739'
+    implementation 'org.apache.commons:commons-csv:1.9.0'
 }
 
 publishing {

@@ -1,13 +1,14 @@
 package com.github.glassmc.kiln.standard.remapper;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.objectweb.asm.commons.Remapper;
-
 import net.fabricmc.mapping.util.EntryTriple;
 
-public class HashRemapper extends Remapper {
+public class HashRemapper extends ReversibleRemapper {
 
     protected Map<String, String> classNames;
     protected Map<EntryTriple, String> fieldNames;
@@ -35,6 +36,7 @@ public class HashRemapper extends Remapper {
         return methodNames.getOrDefault(new EntryTriple(owner, name, descriptor), name);
     }
 
+    @Override
     public HashRemapper reversed() {
         Map<String, String> reverseClassNames = new HashMap<>();
         Map<EntryTriple, String> reverseFieldNames = new HashMap<>();
@@ -42,48 +44,31 @@ public class HashRemapper extends Remapper {
 
         classNames.forEach((key, value) -> reverseClassNames.put(value, key));
 
-        fieldNames.forEach((key, value) -> reverseFieldNames.put(
-                new EntryTriple(classNames.get(key.getOwner()), value, remapDescriptor(key.getDescriptor())),
-                key.getName()));
+        fieldNames.forEach(
+                        (key, value) -> reverseFieldNames.put(
+                                new EntryTriple(map(key.getOwner()), value,
+                                        key.getDescriptor().isEmpty() ? "" : mapDesc(key.getDescriptor())),
+                                key.getName()));
 
         methodNames.forEach((key, value) -> reverseMethodNames.put(
-                new EntryTriple(classNames.get(key.getOwner()), value, remapFullDescriptor(key.getDescriptor())),
+                new EntryTriple(map(key.getOwner()), value, mapMethodDesc(key.getDescriptor())),
                 key.getName()));
 
         return new HashRemapper(reverseClassNames, reverseFieldNames, reverseMethodNames);
     }
 
-    private String remapDescriptor(String descriptor) {
-        if(descriptor.startsWith("L") && descriptor.endsWith(";")) {
-            String className = descriptor.substring(1, descriptor.length() - 1);
+    public UniqueRemapper toUnique() {
+        Map<String, String> fieldNames = new HashMap<>();
+        Map<String, String> methodNames = new HashMap<>();
 
-            descriptor = "L" + map(className) + ";";
-        }
+        this.fieldNames.forEach((key, value) -> {
+            fieldNames.put(key.getName(), value);
+        });
+        this.methodNames.forEach((key, value) -> {
+            methodNames.put(key.getName(), value);
+        });
 
-        return descriptor;
-    }
-
-    private String remapFullDescriptor(String descriptor) {
-        StringBuilder classBuilder = null;
-        StringBuilder result = new StringBuilder();
-
-        for(char c : descriptor.toCharArray()) {
-            if(c == ';' && classBuilder != null) {
-                result.append(remapDescriptor("L" + classBuilder + ";"));
-                classBuilder = null;
-            } else if(c == 'L' && classBuilder == null) {
-                classBuilder = new StringBuilder();
-            } else {
-                if(classBuilder != null) {
-                    classBuilder.append(c);
-                }
-                else {
-                    result.append(c);
-                }
-            }
-        }
-
-        return result.toString();
+        return new UniqueRemapper(methodNames, fieldNames, methodNames);
     }
 
 }

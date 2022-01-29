@@ -1,6 +1,7 @@
 package com.github.glassmc.kiln.standard;
 
 import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
+import com.github.glassmc.kiln.standard.mappings.MCPMappingsProvider;
 import com.github.glassmc.kiln.standard.mappings.MojangMappingsProvider;
 import com.github.glassmc.kiln.common.Util;
 import com.github.glassmc.kiln.standard.mappings.NoSuchMappingsException;
@@ -33,6 +34,9 @@ public class DependencyHandlerExtension {
                 break;
             case "mojang":
                 mappingsProvider = new MojangMappingsProvider();
+                break;
+            case "mcp":
+                mappingsProvider = new MCPMappingsProvider();
                 break;
             case "obfuscated":
             default:

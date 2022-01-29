@@ -11,12 +11,13 @@ import org.objectweb.asm.commons.Remapper;
 import com.github.glassmc.kiln.common.Util;
 import com.github.glassmc.kiln.standard.remapper.HashRemapper;
 import com.github.glassmc.kiln.standard.remapper.ProGuardRemapper;
+import com.github.glassmc.kiln.standard.remapper.ReversibleRemapper;
 
 public class MojangMappingsProvider implements IMappingsProvider {
 
     private String version;
-    private HashRemapper deobfuscator;
-    private HashRemapper obfuscator;
+    private ReversibleRemapper deobfuscator;
+    private ReversibleRemapper obfuscator;
 
     @Override
     public void setup(File minecraftFile, String version) throws NoSuchMappingsException {
