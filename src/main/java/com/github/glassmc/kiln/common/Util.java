@@ -58,9 +58,12 @@ public class Util {
                     }
                 }
 
-                System.out.printf("Downloading %s jar...%n", version);
-                URL versionJarURL = new URL(versionManifest.getJSONObject("downloads").getJSONObject(id).getString("url"));
-                FileUtils.copyURLToFile(versionJarURL, versionJARFile);
+                if (!versionJARFile.exists()) {
+                    System.out.printf("Downloading %s jar...%n", version);
+                    URL versionJarURL = new URL(versionManifest.getJSONObject("downloads").getJSONObject(id).getString("url"));
+                    FileUtils.copyURLToFile(versionJarURL, versionJARFile);
+                }
+
                 JarFile input = new JarFile(versionJARFile);
 
                 System.out.printf("Remapping %s jar with %s mappings...%n", version, mappingsProvider.getID());
@@ -138,12 +141,36 @@ public class Util {
             File objectsFile = new File(assets, "objects");
             objectsFile.mkdirs();
 
+            int i = 0;
+
+            int previousPercent = 0;
+
             String url = "http://resources.download.minecraft.net";
             for (Map.Entry<String, Object> entry : objects.toMap().entrySet()) {
                 Map<String, Object> value = (Map<String, Object>) entry.getValue();
                 String hash = (String) value.get("hash");
                 FileUtils.copyURLToFile(new URL(url + "/" + hash.substring(0, 2) + "/" + hash), new File(objectsFile, hash.substring(0, 2) + "/" + hash));
+
+                double percent = (double) i / objects.length();
+                if (Math.ceil(percent * 100) > previousPercent) {
+                    StringBuilder stringBuilder = new StringBuilder("[");
+                    for (int j = 0; j <  (int) Math.ceil(20 * percent); j++) {
+                        stringBuilder.append("=");
+                    }
+                    for (int j = (int) Math.ceil(20 * percent); j < 20; j++) {
+                        stringBuilder.append(" ");
+                    }
+                    stringBuilder.append("] ").append(Math.ceil(percent * 100)).append("%\r");
+
+                    System.out.write(stringBuilder.toString().getBytes(StandardCharsets.UTF_8));
+                    System.out.flush();
+
+                    previousPercent = (int) Math.ceil(percent * 100);
+                }
+                i++;
             }
+
+            System.out.println();
         } catch (IOException e) {
             e.printStackTrace();
         }
