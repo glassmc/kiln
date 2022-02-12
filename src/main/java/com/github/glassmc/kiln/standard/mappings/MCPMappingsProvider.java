@@ -11,8 +11,8 @@ import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import com.github.glassmc.kiln.common.Pair;
 import org.apache.commons.io.FileUtils;
-import org.gradle.internal.Pair;
 import org.objectweb.asm.commons.Remapper;
 
 import com.github.glassmc.kiln.standard.remapper.CSRGRemapper;
