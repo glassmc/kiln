@@ -1,8 +1,8 @@
 package com.github.glassmc.kiln.standard.mappings;
 
+import com.github.glassmc.kiln.common.Pair;
 import net.fabricmc.mapping.tree.*;
 import org.apache.commons.io.FileUtils;
-import org.gradle.internal.Pair;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.tree.ClassNode;

@@ -160,7 +160,7 @@ public class Util {
                     for (int j = (int) Math.ceil(20 * percent); j < 20; j++) {
                         stringBuilder.append(" ");
                     }
-                    stringBuilder.append("] ").append(Math.ceil(percent * 100)).append("%\r");
+                    stringBuilder.append("] ").append((int) Math.ceil(percent * 100)).append("%\r");
 
                     System.out.write(stringBuilder.toString().getBytes(StandardCharsets.UTF_8));
                     System.out.flush();
