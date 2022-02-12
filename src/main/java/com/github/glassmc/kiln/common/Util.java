@@ -1,6 +1,5 @@
 package com.github.glassmc.kiln.common;
 
-import com.github.glassmc.kiln.standard.KilnStandardPlugin;
 import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -43,14 +42,28 @@ public class Util {
                     File versionNatives = new File(versionFile, "natives");
                     File assets = new File(versionFile, "assets");
 
-                    downloadLibraries(versionManifest, versionLibraries);
-                    downloadNatives(versionManifest, versionNatives);
-                    downloadAssets(versionManifest, assets);
+                    if (!versionLibraries.exists()) {
+                        System.out.printf("Downloading %s libraries...%n", version);
+                        downloadLibraries(versionManifest, versionLibraries);
+                    }
+
+                    if (!versionNatives.exists()) {
+                        System.out.printf("Downloading %s natives...%n", version);
+                        downloadNatives(versionManifest, versionNatives);
+                    }
+
+                    if (!assets.exists()) {
+                        System.out.printf("Downloading %s assets...%n", version);
+                        downloadAssets(versionManifest, assets);
+                    }
                 }
 
+                System.out.printf("Downloading %s jar...%n", version);
                 URL versionJarURL = new URL(versionManifest.getJSONObject("downloads").getJSONObject(id).getString("url"));
                 FileUtils.copyURLToFile(versionJarURL, versionJARFile);
                 JarFile input = new JarFile(versionJARFile);
+
+                System.out.printf("Remapping %s jar with %s mappings...%n", version, mappingsProvider.getID());
 
                 Remapper remapper = mappingsProvider.getRemapper(IMappingsProvider.Direction.TO_NAMED);
 
