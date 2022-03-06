@@ -24,15 +24,15 @@ public class YarnMappingsProvider implements IMappingsProvider {
         {
             put("1.7.10", Pair.of(
                     "https://maven.legacyfabric.net/net/fabricmc/intermediary/1.7.10/intermediary-1.7.10-v2.jar",
-                    "https://maven.legacyfabric.net/net/fabricmc/yarn/1.7.10+build.202112161959/yarn-1.7.10+build.202112161959-v2.jar"
+                    "https://maven.legacyfabric.net/net/fabricmc/yarn/1.7.10+build.202202221426/yarn-1.7.10+build.202202221426-v2.jar"
             ));
             put("1.8.9", Pair.of(
                     "https://maven.legacyfabric.net/net/fabricmc/intermediary/1.8.9/intermediary-1.8.9-v2.jar",
-                    "https://maven.legacyfabric.net/net/fabricmc/yarn/1.8.9+build.202112162000/yarn-1.8.9+build.202112162000-v2.jar"
+                    "https://maven.legacyfabric.net/net/fabricmc/yarn/1.8.9+build.202202221430/yarn-1.8.9+build.202202221430-v2.jar"
             ));
             put("1.12.2", Pair.of(
                     "https://maven.legacyfabric.net/net/fabricmc/intermediary/1.12.2/intermediary-1.12.2-v2.jar",
-                    "https://maven.legacyfabric.net/net/fabricmc/yarn/1.12.2+build.202106280130/yarn-1.12.2+build.202106280130-v2.jar"
+                    "https://maven.legacyfabric.net/net/fabricmc/yarn/1.12.2+build.202202221427/yarn-1.12.2+build.202202221427-v2.jar"
             ));
             put("1.14", Pair.of(
                     "https://maven.fabricmc.net/net/fabricmc/intermediary/1.14/intermediary-1.14-v2.jar",
@@ -104,7 +104,11 @@ public class YarnMappingsProvider implements IMappingsProvider {
             ));
             put("1.18.1", Pair.of(
                     "https://maven.fabricmc.net/net/fabricmc/intermediary/1.18.1/intermediary-1.18.1-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.18.1+build.5/yarn-1.18.1+build.5-v2.jar"
+                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.18.1+build.22/yarn-1.18.1+build.22-v2.jar"
+            ));
+            put("1.18.2", Pair.of(
+                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.18.1/intermediary-1.18.1-v2.jar",
+                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.18.2+build.2/yarn-1.18.2+build.2-v2.jar"
             ));
         }
     };
