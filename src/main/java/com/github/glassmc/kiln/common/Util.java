@@ -11,10 +11,7 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.Remapper;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -33,18 +30,48 @@ public class Util {
         File versionJARFile = new File(versionFile, id + "-" + version + ".jar");
         File versionMappedJARFile = new File(versionFile, id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
 
+        {
+            JSONObject versionManifest = null;
+            try {
+                versionManifest = getVersionManifest(version);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            File versionLibraries = new File(versionFile, "libraries");
+            File versionMappedLibraries = new File(versionFile, "mappedLibraries");
+            if (!versionLibraries.exists()) {
+                System.out.printf("Downloading %s libraries...%n", version);
+                try {
+                    downloadLibraries(versionManifest, versionLibraries);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                System.out.printf("Mapping %s libraries...%n", version);
+                try {
+                    mapLibraries(versionLibraries, versionMappedLibraries, version);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
         if (!versionMappedJARFile.exists()) {
             try {
                 JSONObject versionManifest = getVersionManifest(version);
 
                 if(id.equals("client")) {
                     File versionLibraries = new File(versionFile, "libraries");
+                    File versionMappedLibraries = new File(versionFile, "mappedLibraries");
                     File versionNatives = new File(versionFile, "natives");
                     File assets = new File(versionFile, "assets");
 
                     if (!versionLibraries.exists()) {
                         System.out.printf("Downloading %s libraries...%n", version);
                         downloadLibraries(versionManifest, versionLibraries);
+
+                        System.out.printf("Mapping %s libraries...%n", version);
+                        mapLibraries(versionLibraries, versionMappedLibraries, version);
                     }
 
                     if (!versionNatives.exists()) {
@@ -123,6 +150,69 @@ public class Util {
         }
 
         return versionMappedJARFile;
+    }
+
+    private static void mapLibraries(File versionLibraries, File versionMappedLibraries, String version) throws IOException {
+        versionMappedLibraries.mkdirs();
+
+        List<String> names = new ArrayList<>();
+
+        for (File library : Objects.requireNonNull(versionLibraries.listFiles())) {
+            JarFile jarFile = new JarFile(library);
+            Enumeration<JarEntry> entries = jarFile.entries();
+
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                if (entry.getName().endsWith(".class")) {
+                    names.add(entry.getName().substring(0, entry.getName().length() - 6));
+                }
+            }
+        }
+
+        for (File library : Objects.requireNonNull(versionLibraries.listFiles())) {
+            JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(new File(versionMappedLibraries, library.getName())));
+
+            JarFile jarFile = new JarFile(library);
+            Enumeration<JarEntry> entries = jarFile.entries();
+
+            Remapper remapper = new Remapper() {
+
+                @Override
+                public String map(String name) {
+                    if (names.contains(name)) {
+                        return "v" + version.replace(".", "_") + "/" + name;
+                    }
+                    return name;
+                }
+
+            };
+
+            List<String> added = new ArrayList<>();
+
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                if (entry.getName().endsWith(".class")) {
+                    ClassReader classReader = new ClassReader(IOUtils.readFully(jarFile.getInputStream(entry), (int) entry.getSize()));
+                    ClassWriter writer = new ClassWriter(0);
+                    ClassVisitor visitor = new ClassRemapper(writer, remapper);
+                    classReader.accept(visitor, 0);
+
+                    jarOutputStream.putNextEntry(new JarEntry(remapper.map(entry.getName().replace(".class", "")) + ".class"));
+                    jarOutputStream.write(writer.toByteArray());
+                    jarOutputStream.closeEntry();
+                } else {
+                    if (!added.contains(entry.getName()) && !entry.getName().contains("/")) {
+                        jarOutputStream.putNextEntry(new JarEntry(entry.getName()));
+                        InputStream inputStream = jarFile.getInputStream(entry);
+                        jarOutputStream.write(IOUtils.readFully(inputStream, inputStream.available()));
+                        jarOutputStream.closeEntry();
+                        added.add(entry.getName());
+                    }
+                }
+            }
+
+            jarOutputStream.close();
+        }
     }
 
     private static void downloadAssets(JSONObject versionManifest, File assets) {

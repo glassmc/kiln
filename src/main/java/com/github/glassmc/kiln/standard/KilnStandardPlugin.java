@@ -265,7 +265,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 public Object mapValue(Object value) {
                     Object newValue = value;
                     try {
-                        if(newValue instanceof String && ((String) newValue).chars().allMatch(letter -> Character.isLetterOrDigit(letter) || "#_/();".contains(String.valueOf((char) letter)))) {
+                        if(newValue instanceof String && ((String) newValue).chars().allMatch(letter -> Character.isLetterOrDigit(letter) || "#_/();$".contains(String.valueOf((char) letter)))) {
                             String valueString = (String) newValue;
                             if (valueString.contains("#")) {
                                 String[] classElementSplit = (valueString).split("#");

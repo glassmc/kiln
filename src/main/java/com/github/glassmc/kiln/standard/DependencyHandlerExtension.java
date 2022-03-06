@@ -49,7 +49,7 @@ public class DependencyHandlerExtension {
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
         File versionMappedJARFile = new File(versionFile, id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
-        File versionLibraries = new File(versionFile, "libraries");
+        File versionMappedLibraries = new File(versionFile, "mappedLibraries");
 
         Util.setupMinecraft(id, version, pluginCache, new ObfuscatedMappingsProvider());
 
@@ -62,7 +62,7 @@ public class DependencyHandlerExtension {
         Util.setupMinecraft(id, version, pluginCache, mappingsProvider);
 
         filesToDepend.add(versionMappedJARFile.getAbsolutePath());
-        for (File file : Objects.requireNonNull(versionLibraries.listFiles())) {
+        for (File file : Objects.requireNonNull(versionMappedLibraries.listFiles())) {
             filesToDepend.add(file.getAbsolutePath());
         }
 
