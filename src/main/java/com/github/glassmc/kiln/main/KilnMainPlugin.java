@@ -41,6 +41,7 @@ public class KilnMainPlugin implements Plugin<Project> {
         PublishingExtension publishing = (PublishingExtension) project.getExtensions().getByName("publishing");
 
         publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> {
+            publication.getArtifacts().clear();
             publication.artifact(artifact);
         });
 
