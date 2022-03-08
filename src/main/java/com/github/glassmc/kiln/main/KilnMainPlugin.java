@@ -7,6 +7,12 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.PublishArtifact;
+import org.gradle.api.file.RegularFile;
+import org.gradle.api.provider.Provider;
+import org.gradle.api.publish.PublishingExtension;
+import org.gradle.api.publish.maven.MavenPublication;
+import org.gradle.api.publish.maven.internal.publication.DefaultMavenPublication;
 
 import java.io.File;
 
@@ -25,7 +31,17 @@ public class KilnMainPlugin implements Plugin<Project> {
         instance = this;
         this.project = project;
 
+        project.getPlugins().apply("maven-publish");
         project.getPlugins().apply("kiln-standard");
+
+        Provider<RegularFile> file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-mapped.jar");
+        PublishArtifact artifact = project.getArtifacts().add("archives", file.get().getAsFile());
+
+        PublishingExtension publishing = (PublishingExtension) project.getExtensions().getByName("publishing");
+
+        publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> {
+            publication.artifact(artifact);
+        });
 
         project.getTasks().register("getRunConfiguration", GetRunConfiguration.class);
         project.getTasks().register("genRunConfiguration", GenerateRunConfiguration.class);
