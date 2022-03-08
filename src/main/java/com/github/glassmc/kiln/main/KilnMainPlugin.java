@@ -6,6 +6,7 @@ import com.github.glassmc.kiln.standard.KilnStandardPlugin;
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.PublishArtifact;
 import org.gradle.api.file.RegularFile;
@@ -42,6 +43,12 @@ public class KilnMainPlugin implements Plugin<Project> {
         publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> {
             publication.artifact(artifact);
         });
+
+        for (Task task : project.getTasks()) {
+            if (task.getName().startsWith("publish")) {
+                task.dependsOn(project.getTasks().getByName("shadowJar"));
+            }
+        }
 
         project.getTasks().register("getRunConfiguration", GetRunConfiguration.class);
         project.getTasks().register("genRunConfiguration", GenerateRunConfiguration.class);
