@@ -9,7 +9,9 @@ import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.PublishArtifact;
+import org.gradle.api.component.SoftwareComponent;
 import org.gradle.api.file.RegularFile;
+import org.gradle.api.plugins.internal.DefaultAdhocSoftwareComponent;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
@@ -35,15 +37,7 @@ public class KilnMainPlugin implements Plugin<Project> {
         project.getPlugins().apply("maven-publish");
         project.getPlugins().apply("kiln-standard");
 
-        Provider<RegularFile> file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-mapped.jar");
-        PublishArtifact artifact = project.getArtifacts().add("archives", file.get().getAsFile());
-
         PublishingExtension publishing = (PublishingExtension) project.getExtensions().getByName("publishing");
-
-        publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> {
-            publication.getArtifacts().clear();
-            publication.artifact(artifact);
-        });
 
         for (Task task : project.getTasks()) {
             if (task.getName().startsWith("publish")) {
@@ -55,6 +49,17 @@ public class KilnMainPlugin implements Plugin<Project> {
         project.getTasks().register("genRunConfiguration", GenerateRunConfiguration.class);
 
         this.setupShadow();
+
+        project.afterEvaluate(project1 -> {
+            publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> {
+                publication.from(project.getComponents().getByName("java"));
+
+                Provider<RegularFile> file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-" + project.getVersion() + "-mapped.jar");
+                PublishArtifact artifact = project.getArtifacts().add("archives", file.get().getAsFile());
+
+                publication.artifact(artifact);
+            });
+        });
     }
 
     private void setupShadow() {

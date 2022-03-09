@@ -89,288 +89,267 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
         @Override
         public void execute(Task task) {
-            File classes = new File(project.getBuildDir(), "classes");
-
             List<IMappingsProvider> mappingsProviders = getMappingsProviders();
 
             Map<String, ClassNode> classNodes = new HashMap<>();
             Map<String, byte[]> resources = new HashMap<>();
 
-            try {
-                File file = new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar");
-                if (!file.exists()) {
-                    file = new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all.jar");
+            List<File> files = new ArrayList<>();
+
+            File jar = new File(project.getBuildDir(), "libs/" + project.getName() + ".jar");
+            if (jar.exists()) {
+                files.add(jar);
+            } else {
+                jar = new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + ".jar");
+                if (jar.exists()) {
+                    files.add(jar);
                 }
-                JarFile jarFile = new JarFile(file);
-                Enumeration<JarEntry> entries = jarFile.entries();
-
-                while (entries.hasMoreElements()) {
-                    JarEntry entry = entries.nextElement();
-
-                    if (entry.getName().endsWith(".class")) {
-                        InputStream inputStream = jarFile.getInputStream(entry);
-                        ClassReader classReader = new ClassReader(IOUtils.readFully(inputStream, inputStream.available()));
-                        ClassNode classNode = new ClassNode();
-                        classReader.accept(classNode, 0);
-
-                        classNodes.put(classNode.name, classNode);
-                    } else {
-                        InputStream inputStream = jarFile.getInputStream(entry);
-                        resources.put(entry.getName(), IOUtils.readFully(inputStream, inputStream.available()));
-                    }
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
             }
 
-            /*for(File file : project.fileTree(classes)) {
-                if(!file.getName().endsWith(".class")) {
-                    continue;
+            File shadedJar = new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar");
+            if (shadedJar.exists()) {
+                files.add(shadedJar);
+            } else {
+                shadedJar = new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all.jar");
+                if (shadedJar.exists()) {
+                    files.add(shadedJar);
                 }
+            }
 
+            for (File file : files) {
                 try {
-                    InputStream inputStream = new FileInputStream(file);
-                    ClassReader classReader = new ClassReader(IOUtils.readFully(inputStream, inputStream.available()));
-                    ClassNode classNode = new ClassNode();
-                    classReader.accept(classNode, 0);
+                    JarFile jarFile = new JarFile(file);
+                    Enumeration<JarEntry> entries = jarFile.entries();
 
-                    String language = file.getAbsolutePath();
-                    language = language.substring(language.indexOf("classes" + File.separator) + 8);
-                    language = language.substring(0, language.indexOf(File.separator));
+                    while (entries.hasMoreElements()) {
+                        JarEntry entry = entries.nextElement();
 
-                    String className = file.getAbsolutePath().replace(new File(classes, language + File.separator + "main").getAbsolutePath() + File.separator, "").replace(".class", "");
+                        InputStream inputStream = jarFile.getInputStream(entry);
 
-                    classNodes.put(className, classNode);
-                    classPaths.put(className, file);
-                    inputStream.close();
+                        if (entry.getName().endsWith(".class")) {
+                            ClassReader classReader = new ClassReader(IOUtils.readFully(inputStream, inputStream.available()));
+                            ClassNode classNode = new ClassNode();
+                            classReader.accept(classNode, 0);
+
+                            classNodes.put(classNode.name, classNode);
+                        } else {
+                            resources.put(entry.getName(), IOUtils.readFully(inputStream, inputStream.available()));
+                        }
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-            }*/
 
-            List<Map.Entry<IMappingsProvider, Remapper>> remappers = mappingsProviders.stream()
-                    .map(provider -> new AbstractMap.SimpleEntry<>(provider, provider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED)))
-                    .collect(Collectors.toList());
+                List<Map.Entry<IMappingsProvider, Remapper>> remappers = mappingsProviders.stream()
+                        .map(provider -> new AbstractMap.SimpleEntry<>(provider, provider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED)))
+                        .collect(Collectors.toList());
 
-            Remapper versionRemover = new Remapper() {
+                Remapper versionRemover = new Remapper() {
 
-                @Override
-                public String map(String name) {
-                    if (name.startsWith("v")) {
-                        return name.substring(name.indexOf("/") + 1);
-                    } else {
-                        return name;
-                    }
-                }
-
-            };
-
-            Map<String, List<String>> classesMap = new HashMap<>();
-
-            Remapper collectiveRemapper = new Remapper() {
-
-                @Override
-                public String map(String name) {
-                    String newName;
-                    String nameVersion;
-                    if (name.startsWith("v")) {
-                        newName = name.substring(name.indexOf("/") + 1);
-                        nameVersion = name.substring(1, name.indexOf("/")).replace("_", ".");
-                    } else {
-                        newName = name;
-                        nameVersion = null;
-                    }
-                    for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
-                        if (remapper.getKey().getVersion().equals(nameVersion)) {
-                            newName = remapper.getValue().map(newName);
-                        }
-                    }
-                    return newName;
-                }
-
-                @Override
-                public String mapFieldName(String owner, String name, String descriptor) {
-                    String newOwner;
-                    String nameVersion;
-                    if (owner.startsWith("v")) {
-                        newOwner = owner.substring(owner.indexOf("/") + 1);
-                        nameVersion = owner.substring(1, owner.indexOf("/")).replace("_", ".");
-                    } else {
-                        newOwner = owner;
-                        nameVersion = null;
-                    }
-                    String newName = name;
-                    for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
-                        if (remapper.getKey().getVersion().equals(nameVersion)) {
-                            newName = remapper.getValue().mapFieldName(newOwner, newName, descriptor);
-                        }
-                    }
-                    return newName;
-                }
-
-                @Override
-                public String mapMethodName(String owner, String name, String descriptor) {
-                    List<String> parents = classesMap.get(owner);
-                    if (parents == null) {
-                        parents = new ArrayList<>();
-                    }
-                    parents.add(owner);
-
-                    String nameVersion = null;
-                    for (String classString : new ArrayList<>(parents)) {
-                        if (classString.startsWith("v")) {
-                            String newClassString = classString.substring(classString.indexOf("/") + 1);
-                            parents.replaceAll(string -> {
-                                if (string.equals(classString)) {
-                                    return newClassString;
-                                }
-                                return classString;
-                            });
-                            nameVersion = classString.substring(1, classString.indexOf("/")).replace("_", ".");
+                    @Override
+                    public String map(String name) {
+                        if (name.startsWith("v")) {
+                            return name.substring(name.indexOf("/") + 1);
+                        } else {
+                            return name;
                         }
                     }
 
-                    String newName = name;
+                };
 
-                    for (String classString : parents) {
+                Map<String, List<String>> classesMap = new HashMap<>();
+
+                Remapper collectiveRemapper = new Remapper() {
+
+                    @Override
+                    public String map(String name) {
+                        String newName;
+                        String nameVersion;
+                        if (name.startsWith("v")) {
+                            newName = name.substring(name.indexOf("/") + 1);
+                            nameVersion = name.substring(1, name.indexOf("/")).replace("_", ".");
+                        } else {
+                            newName = name;
+                            nameVersion = null;
+                        }
                         for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
                             if (remapper.getKey().getVersion().equals(nameVersion)) {
-                                newName = remapper.getValue().mapMethodName(classString, newName, versionRemover.mapDesc(descriptor));
+                                newName = remapper.getValue().map(newName);
                             }
                         }
+                        return newName;
                     }
-                    return newName;
-                }
 
-            };
+                    @Override
+                    public String mapFieldName(String owner, String name, String descriptor) {
+                        String newOwner;
+                        String nameVersion;
+                        if (owner.startsWith("v")) {
+                            newOwner = owner.substring(owner.indexOf("/") + 1);
+                            nameVersion = owner.substring(1, owner.indexOf("/")).replace("_", ".");
+                        } else {
+                            newOwner = owner;
+                            nameVersion = null;
+                        }
+                        String newName = name;
+                        for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
+                            if (remapper.getKey().getVersion().equals(nameVersion)) {
+                                newName = remapper.getValue().mapFieldName(newOwner, newName, descriptor);
+                            }
+                        }
+                        return newName;
+                    }
 
-            Remapper realRemapper = new Remapper() {
+                    @Override
+                    public String mapMethodName(String owner, String name, String descriptor) {
+                        List<String> parents = classesMap.get(owner);
+                        if (parents == null) {
+                            parents = new ArrayList<>();
+                        }
+                        parents.add(owner);
 
-                @Override
-                public String map(String name) {
-                    return collectiveRemapper.map(name);
-                }
+                        String nameVersion = null;
+                        for (String classString : new ArrayList<>(parents)) {
+                            if (classString.startsWith("v")) {
+                                String newClassString = classString.substring(classString.indexOf("/") + 1);
+                                parents.replaceAll(string -> {
+                                    if (string.equals(classString)) {
+                                        return newClassString;
+                                    }
+                                    return classString;
+                                });
+                                nameVersion = classString.substring(1, classString.indexOf("/")).replace("_", ".");
+                            }
+                        }
 
-                @Override
-                public String mapFieldName(String owner, String name, String descriptor) {
-                    return collectiveRemapper.mapFieldName(owner, name, descriptor);
-                }
+                        String newName = name;
 
-                @Override
-                public String mapMethodName(String owner, String name, String descriptor) {
-                    return collectiveRemapper.mapMethodName(owner, name, descriptor);
-                }
+                        for (String classString : parents) {
+                            for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
+                                if (remapper.getKey().getVersion().equals(nameVersion)) {
+                                    newName = remapper.getValue().mapMethodName(classString, newName, versionRemover.mapDesc(descriptor));
+                                }
+                            }
+                        }
+                        return newName;
+                    }
 
-                @Override
-                public Object mapValue(Object value) {
-                    Object newValue = value;
-                    try {
-                        if(newValue instanceof String && ((String) newValue).chars().allMatch(letter -> Character.isLetterOrDigit(letter) || "#_/();$".contains(String.valueOf((char) letter)))) {
-                            String valueString = (String) newValue;
-                            if (valueString.contains("#")) {
-                                String[] classElementSplit = (valueString).split("#");
-                                String newName = this.map(classElementSplit[0]);
-                                if(classElementSplit[1].contains("(")) {
-                                    String[] methodDescriptorSplit = classElementSplit[1].split("\\(");
+                };
+
+                Remapper realRemapper = new Remapper() {
+
+                    @Override
+                    public String map(String name) {
+                        return collectiveRemapper.map(name);
+                    }
+
+                    @Override
+                    public String mapFieldName(String owner, String name, String descriptor) {
+                        return collectiveRemapper.mapFieldName(owner, name, descriptor);
+                    }
+
+                    @Override
+                    public String mapMethodName(String owner, String name, String descriptor) {
+                        return collectiveRemapper.mapMethodName(owner, name, descriptor);
+                    }
+
+                    @Override
+                    public Object mapValue(Object value) {
+                        Object newValue = value;
+                        try {
+                            if(newValue instanceof String && ((String) newValue).chars().allMatch(letter -> Character.isLetterOrDigit(letter) || "#_/();$".contains(String.valueOf((char) letter)))) {
+                                String valueString = (String) newValue;
+                                if (valueString.contains("#")) {
+                                    String[] classElementSplit = (valueString).split("#");
+                                    String newName = this.map(classElementSplit[0]);
+                                    if(classElementSplit[1].contains("(")) {
+                                        String[] methodDescriptorSplit = classElementSplit[1].split("\\(");
+                                        methodDescriptorSplit[1] = "(" + methodDescriptorSplit[1];
+
+                                        String newMethodName = this.mapMethodName(classElementSplit[0], methodDescriptorSplit[0], methodDescriptorSplit[1]);
+                                        String newMethodDescription = this.mapMethodDesc(methodDescriptorSplit[1]);
+                                        newValue =  newName + "#" + newMethodName + newMethodDescription;
+                                    } else {
+                                        String newFieldName = this.mapFieldName(classElementSplit[0], classElementSplit[1], "");
+                                        newValue =  newName + "#" + newFieldName;
+                                    }
+                                } else if (valueString.startsWith("(")) {
+                                    newValue = this.mapDesc(valueString);
+                                } else if (valueString.contains("(")) {
+                                    String[] methodDescriptorSplit = valueString.split("\\(");
                                     methodDescriptorSplit[1] = "(" + methodDescriptorSplit[1];
 
-                                    String newMethodName = this.mapMethodName(classElementSplit[0], methodDescriptorSplit[0], methodDescriptorSplit[1]);
+                                    String newMethodName = methodDescriptorSplit[0];
                                     String newMethodDescription = this.mapMethodDesc(methodDescriptorSplit[1]);
-                                    newValue =  newName + "#" + newMethodName + newMethodDescription;
+
+                                    newValue = newMethodName + newMethodDescription;
                                 } else {
-                                    String newFieldName = this.mapFieldName(classElementSplit[0], classElementSplit[1], "");
-                                    newValue =  newName + "#" + newFieldName;
+                                    newValue = this.map(valueString);
                                 }
-                            } else if (valueString.startsWith("(")) {
-                                newValue = this.mapDesc(valueString);
-                            } else if (valueString.contains("(")) {
-                                String[] methodDescriptorSplit = valueString.split("\\(");
-                                methodDescriptorSplit[1] = "(" + methodDescriptorSplit[1];
-
-                                String newMethodName = methodDescriptorSplit[0];
-                                String newMethodDescription = this.mapMethodDesc(methodDescriptorSplit[1]);
-
-                                newValue = newMethodName + newMethodDescription;
-                            } else {
-                                newValue = this.map(valueString);
                             }
+                        } catch (Exception ignored) {
+                            //e.printStackTrace();
                         }
-                    } catch (Exception ignored) {
-                        //e.printStackTrace();
+
+                        try {
+                            if (value instanceof Type) {
+                                newValue = Type.getType(this.mapDesc(((Type) value).getDescriptor()));
+                            }
+
+                            if (value instanceof Handle) {
+                                Handle handle = (Handle) value;
+                                newValue = new Handle(handle.getTag(), handle.getOwner(), handle.getName(), this.mapDesc(handle.getDesc()), handle.isInterface());
+                            }
+                        } catch(Exception ignored) {
+
+                        }
+
+                        return newValue;
                     }
+                };
 
-                    try {
-                        if (value instanceof Type) {
-                            newValue = Type.getType(this.mapDesc(((Type) value).getDescriptor()));
-                        }
-
-                        if (value instanceof Handle) {
-                            Handle handle = (Handle) value;
-                            newValue = new Handle(handle.getTag(), handle.getOwner(), handle.getName(), this.mapDesc(handle.getDesc()), handle.isInterface());
-                        }
-                    } catch(Exception ignored) {
-
-                    }
-
-                    return newValue;
+                for(CustomRemapper customRemapper : extension.remappers) {
+                    customRemapper.setParent(collectiveRemapper);
+                    customRemapper.map(classNodes);
                 }
-            };
-
-            for(CustomRemapper customRemapper : extension.remappers) {
-                customRemapper.setParent(collectiveRemapper);
-                customRemapper.map(classNodes);
-            }
-
-            for(Map.Entry<String, ClassNode> entry : classNodes.entrySet()) {
-                ClassNode classNode = entry.getValue();
-
-                List<String> parents = new ArrayList<>();
-                parents.add(classNode.superName);
-                parents.addAll(classNode.interfaces);
-
-                classesMap.put(classNode.name, parents);
-            }
-
-            /*for(Map.Entry<String, ClassNode> entry : classNodes.entrySet()) {
-                ClassNode classNode = entry.getValue();
-                ClassWriter writer = new ClassWriter(0);
-                ClassVisitor visitor = new ClassRemapper(writer, realRemapper);
-                classNode.accept(visitor);
-                try {
-                    OutputStream outputStream = new FileOutputStream(classPaths.get(entry.getKey()));
-                    outputStream.write(writer.toByteArray());
-                    outputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }*/
-
-            try {
-                JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(new File(project.getBuildDir(), "libs/" + project.getName() + "-mapped.jar")));
 
                 for(Map.Entry<String, ClassNode> entry : classNodes.entrySet()) {
                     ClassNode classNode = entry.getValue();
-                    ClassWriter writer = new ClassWriter(0);
-                    ClassVisitor visitor = new ClassRemapper(writer, realRemapper);
-                    classNode.accept(visitor);
-                    try {
-                        jarOutputStream.putNextEntry(new JarEntry(entry.getKey() + ".class"));
-                        jarOutputStream.write(writer.toByteArray());
-                        jarOutputStream.closeEntry();
-                    } catch (IOException e) {
-                        e.printStackTrace();
+
+                    List<String> parents = new ArrayList<>();
+                    parents.add(classNode.superName);
+                    parents.addAll(classNode.interfaces);
+
+                    classesMap.put(classNode.name, parents);
+                }
+
+                try {
+                    JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(new File(project.getBuildDir(), "libs/" + file.getName().replace(".jar", "-mapped.jar"))));
+
+                    for(Map.Entry<String, ClassNode> entry : classNodes.entrySet()) {
+                        ClassNode classNode = entry.getValue();
+                        ClassWriter writer = new ClassWriter(0);
+                        ClassVisitor visitor = new ClassRemapper(writer, realRemapper);
+                        classNode.accept(visitor);
+                        try {
+                            jarOutputStream.putNextEntry(new JarEntry(entry.getKey() + ".class"));
+                            jarOutputStream.write(writer.toByteArray());
+                            jarOutputStream.closeEntry();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
-                }
 
-                for (Map.Entry<String, byte[]> entry : resources.entrySet()) {
-                    jarOutputStream.putNextEntry(new JarEntry(entry.getKey()));
-                    jarOutputStream.write(entry.getValue());
-                    jarOutputStream.closeEntry();
-                }
+                    for (Map.Entry<String, byte[]> entry : resources.entrySet()) {
+                        jarOutputStream.putNextEntry(new JarEntry(entry.getKey()));
+                        jarOutputStream.write(entry.getValue());
+                        jarOutputStream.closeEntry();
+                    }
 
-                jarOutputStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+                    jarOutputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
