@@ -69,35 +69,4 @@ public class DependencyHandlerExtension {
         return plugin.getProject().files(filesToDepend.toArray());
     }
 
-    public static FileCollection shard(String id, String version) {
-        KilnStandardPlugin plugin = KilnStandardPlugin.getInstance();
-
-        File file = new File(plugin.getProject().getGradle().getGradleUserHomeDir() + File.separator + "caches" + File.separator + "kiln" + File.separator + "shard" + File.separator + id + "-" + version + ".jar");
-        file.getParentFile().mkdirs();
-
-        FileCollection files = plugin.getProject().files(file);
-
-        try {
-            URL url = new URL("https://raw.githubusercontent.com/glassmc/registry/main/shards/" + id + "/" + version + "/" + id + "-" + version + ".toml");
-            String shardVersionData = IOUtils.toString(url, StandardCharsets.UTF_8);
-            TomlTable shardVersionDataTOML = Toml.from(new StringReader(shardVersionData));
-            if(!file.exists()) {
-                String shardFile = (String) shardVersionDataTOML.get("file");
-                if(shardFile != null) {
-                    FileUtils.copyURLToFile(new URL(shardFile), file);
-                }
-            }
-
-            TomlTable downloadsToml = (TomlTable) shardVersionDataTOML.getOrDefault("downloads", new TomlTable());
-            for(String downloadID : downloadsToml.keySet()) {
-                files = files.plus(shard(downloadID, (String) downloadsToml.get(downloadID)));
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return files;
-    }
-
 }

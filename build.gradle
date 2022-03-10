@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'com.github.glassmc'
-version '0.6.18'
+version '0.7.1'
 
 sourceCompatibility = targetCompatibility = 1.8
 
@@ -37,6 +37,12 @@ publishing {
             version = project.version
 
             from components.java
+        }
+    }
+
+    repositories {
+        maven {
+            url = "file:///home/danielc/dev/glass/repository"
         }
     }
 }

@@ -5,17 +5,17 @@ import org.objectweb.asm.tree.ClassNode;
 
 import java.util.Map;
 
-public abstract class CustomRemapper {
+public abstract class CustomTransformer {
 
-    private Remapper parent;
+    private Remapper remapper;
 
     @SuppressWarnings("unused")
-    public Remapper getParent() {
-        return parent;
+    public Remapper getRemapper() {
+        return remapper;
     }
 
-    public void setParent(Remapper parent) {
-        this.parent = parent;
+    public void setRemapper(Remapper remapper) {
+        this.remapper = remapper;
     }
 
     public abstract void map(Map<String, ClassNode> classNodes);

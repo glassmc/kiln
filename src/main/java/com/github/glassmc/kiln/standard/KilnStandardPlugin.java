@@ -45,7 +45,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
         this.setupShadowPlugin();
 
         project.afterEvaluate(p -> p.getTasks().forEach(task -> {
-            if (task.getName().equals("shadowJar")) {
+            if (task.getName().equals("shadowJar") || task.getName().equals("build")) {
                 task.doLast(new ReobfuscateAction());
             }
         }));
@@ -308,9 +308,9 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     }
                 };
 
-                for(CustomRemapper customRemapper : extension.remappers) {
-                    customRemapper.setParent(collectiveRemapper);
-                    customRemapper.map(classNodes);
+                for(CustomTransformer customTransformer : extension.transformers) {
+                    customTransformer.setRemapper(collectiveRemapper);
+                    customTransformer.map(classNodes);
                 }
 
                 for(Map.Entry<String, ClassNode> entry : classNodes.entrySet()) {

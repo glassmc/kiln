@@ -1,7 +1,13 @@
 package com.github.glassmc.kiln.standard;
 
+import com.github.glassmc.kiln.standard.environment.Environment;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public abstract class KilnStandardExtension {
 
-    public CustomRemapper[] remappers = new CustomRemapper[0];
+    public List<CustomTransformer> transformers = new ArrayList<>();
+    public Environment environment = null;
 
 }

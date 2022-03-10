@@ -2,6 +2,8 @@ package com.github.glassmc.kiln.main.task;
 
 import com.github.glassmc.kiln.main.KilnMainPlugin;
 import com.github.glassmc.kiln.common.Util;
+import com.github.glassmc.kiln.standard.KilnStandardExtension;
+import com.github.glassmc.kiln.standard.environment.Environment;
 import com.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
@@ -10,6 +12,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -48,6 +51,10 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
             vmArgsBuilder.append(dependency.getAbsolutePath()).append(File.pathSeparator);
         }
 
+        KilnStandardExtension extension = (KilnStandardExtension) this.getProject().getExtensions().getByName("kiln");
+        Environment environment1 = extension.environment;
+        vmArgsBuilder.append(String.join(File.pathSeparator, environment1.getRuntimeDependencies(KilnMainPlugin.getInstance().getCache())));
+
         File shadedJar = new File(this.getProject().getBuildDir(), "libs/" + this.getProject().getName() + "-all-mapped.jar");
         if (!shadedJar.exists()) {
             shadedJar = new File(this.getProject().getBuildDir(), "libs/" + this.getProject().getName() + "-" + this.getProject().getVersion() + "-all-mapped.jar");
@@ -59,7 +66,8 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         vmArgsBuilder.append(" -Djava.library.path=").append(natives.getAbsolutePath());
 
         String name = environment.substring(0, 1).toUpperCase(Locale.ROOT) + environment.substring(1) + " " + version;
-        String mainClass = environment.equals("client") ? "com.github.glassmc.loader.client.GlassClientMain" : "com.github.glassmc.loader.server.GlassServerMain";
+
+        String mainClass = environment1.getMainClass();
         String module = getProject().getRootProject().getName() + ".main";
         String programArguments = "--accessToken 0 --version " + version + " --userProperties {} --assetsDir " + new File(pluginCache, "minecraft/" + version + "/assets/");
 
@@ -70,6 +78,8 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        programArguments += " " + String.join(" ", environment1.getProgramArguments(environment));
 
         String vmArguments = vmArgsBuilder.toString();
 
