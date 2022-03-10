@@ -53,7 +53,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
         KilnStandardExtension extension = (KilnStandardExtension) this.getProject().getExtensions().getByName("kiln");
         Environment environment1 = extension.environment;
-        vmArgsBuilder.append(String.join(File.pathSeparator, environment1.getRuntimeDependencies(KilnMainPlugin.getInstance().getCache())));
+        vmArgsBuilder.append(String.join(File.pathSeparator, environment1.getRuntimeDependencies(KilnMainPlugin.getInstance().getCache()))).append(File.pathSeparator);
 
         File shadedJar = new File(this.getProject().getBuildDir(), "libs/" + this.getProject().getName() + "-all-mapped.jar");
         if (!shadedJar.exists()) {
