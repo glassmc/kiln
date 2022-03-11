@@ -3,6 +3,7 @@ package com.github.glassmc.kiln.standard.mappings;
 import com.github.glassmc.kiln.common.Pair;
 import net.fabricmc.mapping.tree.*;
 import org.apache.commons.io.FileUtils;
+import org.json.JSONObject;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.tree.ClassNode;
@@ -12,106 +13,13 @@ import com.github.glassmc.kiln.standard.remapper.TinyRemapper;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 
 public class YarnMappingsProvider implements IMappingsProvider {
-
-    // TODO Replace hard-coded build numbers, and scan maven-metadata.xml.
-    private final Map<String, Pair<String, String>> mappings = new HashMap<String, Pair<String, String>>() {
-        {
-            put("1.7.10", Pair.of(
-                    "https://maven.legacyfabric.net/net/fabricmc/intermediary/1.7.10/intermediary-1.7.10-v2.jar",
-                    "https://maven.legacyfabric.net/net/fabricmc/yarn/1.7.10+build.202202221426/yarn-1.7.10+build.202202221426-v2.jar"
-            ));
-            put("1.8.9", Pair.of(
-                    "https://maven.legacyfabric.net/net/fabricmc/intermediary/1.8.9/intermediary-1.8.9-v2.jar",
-                    "https://maven.legacyfabric.net/net/fabricmc/yarn/1.8.9+build.202202221430/yarn-1.8.9+build.202202221430-v2.jar"
-            ));
-            put("1.12.2", Pair.of(
-                    "https://maven.legacyfabric.net/net/fabricmc/intermediary/1.12.2/intermediary-1.12.2-v2.jar",
-                    "https://maven.legacyfabric.net/net/fabricmc/yarn/1.12.2+build.202202221427/yarn-1.12.2+build.202202221427-v2.jar"
-            ));
-            put("1.14", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.14/intermediary-1.14-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.14+build.21/yarn-1.14+build.21-v2.jar"
-            ));
-            put("1.14.1", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.14.1/intermediary-1.14.1-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.14.1+build.10/yarn-1.14.1+build.10-v2.jar"
-            ));
-            put("1.14.2", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.14.2/intermediary-1.14.2-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.14.2+build.7/yarn-1.14.2+build.7-v2.jar"
-            ));
-            put("1.14.3", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.14.3/intermediary-1.14.3-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.14.3+build.13/yarn-1.14.3+build.13-v2.jar"
-            ));
-            put("1.14.4", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.14.4/intermediary-1.14.4-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.14.4+build.13/yarn-1.14.4+build.18-v2.jar"
-            ));
-            put("1.15", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.15/intermediary-1.15-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.15+build.2/yarn-1.15+build.2-v2.jar"
-            ));
-            put("1.15.1", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.15.1/intermediary-1.15.1-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.15.1+build.37/yarn-1.15.1+build.37-v2.jar"
-            ));
-            put("1.15.2", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.15.2/intermediary-1.15.2-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.15.2+build.17/yarn-1.15.2+build.17-v2.jar"
-            ));
-            put("1.16", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.16/intermediary-1.16-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.16+build.4/yarn-1.16+build.4-v2.jar"
-            ));
-            put("1.16.1", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.16.1/intermediary-1.16.1-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.16.1+build.21/yarn-1.16.1+build.21-v2.jar"
-            ));
-            put("1.16.2", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.16.2/intermediary-1.16.2-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.16.2+build.47/yarn-1.16.2+build.47-v2.jar"
-            ));
-            put("1.16.3", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.16.3/intermediary-1.16.3-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.16.3+build.47/yarn-1.16.3+build.47-v2.jar"
-            ));
-            put("1.16.4", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.16.4/intermediary-1.16.4-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.16.4+build.9/yarn-1.16.4+build.9-v2.jar"
-            ));
-            put("1.16.5", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.16.5/intermediary-1.16.5-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.16.5+build.10/yarn-1.16.5+build.10-v2.jar"
-            ));
-            put("1.17", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.17/intermediary-1.17-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.17+build.13/yarn-1.17+build.13-v2.jar"
-            ));
-            put("1.17.1", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.17.1/intermediary-1.17.1-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.17.1+build.65/yarn-1.17.1+build.65-v2.jar"
-            ));
-            put("1.18", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.18/intermediary-1.18-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.18+build.1/yarn-1.18+build.1-v2.jar"
-            ));
-            put("1.18.1", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.18.1/intermediary-1.18.1-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.18.1+build.22/yarn-1.18.1+build.22-v2.jar"
-            ));
-            put("1.18.2", Pair.of(
-                    "https://maven.fabricmc.net/net/fabricmc/intermediary/1.18.1/intermediary-1.18.1-v2.jar",
-                    "https://maven.fabricmc.net/net/fabricmc/yarn/1.18.2+build.2/yarn-1.18.2+build.2-v2.jar"
-            ));
-        }
-    };
 
     private TinyTree namedTree;
     private TinyTree intermediaryTree;
@@ -122,12 +30,22 @@ public class YarnMappingsProvider implements IMappingsProvider {
     public void setup(File minecraftFile, String version) throws NoSuchMappingsException {
         this.version = version;
 
-        File temp = new File(minecraftFile, "temp");
-        Pair<String, String> mappingURLs = mappings.get(version);
+        File mappingsJson = new File(minecraftFile.getParentFile().getParentFile(), "mappings.json");
+        JSONObject jsonObject = null;
+        try {
+            jsonObject = new JSONObject(FileUtils.readFileToString(mappingsJson, StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        if(mappingURLs == null) {
+        JSONObject mappings = jsonObject.getJSONObject("yarn").getJSONObject(version);
+
+        if (mappings == null) {
             throw new NoSuchMappingsException(version);
         }
+
+        File temp = new File(minecraftFile, "temp");
+        Pair<String, String> mappingURLs = new Pair<>(mappings.getString("intermediary"), mappings.getString("named"));
 
         URL intermediaryURL;
         URL namedURL;
@@ -273,6 +191,18 @@ public class YarnMappingsProvider implements IMappingsProvider {
     @Override
     public String getVersion() {
         return this.version;
+    }
+
+    @Override
+    public void clearCache(File minecraftFile) {
+        File temp = new File(minecraftFile, "temp");
+        try {
+            if (temp.exists()) {
+                FileUtils.cleanDirectory(temp);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

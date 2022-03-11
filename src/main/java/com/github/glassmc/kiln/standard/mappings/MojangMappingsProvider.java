@@ -66,4 +66,9 @@ public class MojangMappingsProvider implements IMappingsProvider {
         return version;
     }
 
+    @Override
+    public void clearCache(File minecraftFile) {
+
+    }
+
 }

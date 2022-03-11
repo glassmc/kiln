@@ -30,32 +30,6 @@ public class Util {
         File versionJARFile = new File(versionFile, id + "-" + version + ".jar");
         File versionMappedJARFile = new File(versionFile, id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
 
-        {
-            JSONObject versionManifest = null;
-            try {
-                versionManifest = getVersionManifest(version);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            File versionLibraries = new File(versionFile, "libraries");
-            File versionMappedLibraries = new File(versionFile, "mappedLibraries");
-            if (!versionLibraries.exists()) {
-                System.out.printf("Downloading %s libraries...%n", version);
-                try {
-                    downloadLibraries(versionManifest, versionLibraries);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                System.out.printf("Mapping %s libraries...%n", version);
-                try {
-                    mapLibraries(versionLibraries, versionMappedLibraries, version);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
         if (!versionMappedJARFile.exists()) {
             try {
                 JSONObject versionManifest = getVersionManifest(version);

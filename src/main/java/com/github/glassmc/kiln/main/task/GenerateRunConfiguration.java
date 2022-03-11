@@ -20,6 +20,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
     @TaskAction
     public void run() {
+        this.setGroup("kiln");
         String arguments = (String) this.getProject().getProperties().get("configuration");
         String[] argumentsSplit = arguments.split(",");
 

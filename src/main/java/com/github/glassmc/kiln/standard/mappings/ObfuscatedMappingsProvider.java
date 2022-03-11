@@ -25,4 +25,10 @@ public class ObfuscatedMappingsProvider implements IMappingsProvider {
     public String getVersion() {
         return null;
     }
+
+    @Override
+    public void clearCache(File minecraftFile) {
+
+    }
+
 }

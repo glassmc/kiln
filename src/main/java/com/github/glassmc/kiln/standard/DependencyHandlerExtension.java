@@ -51,6 +51,12 @@ public class DependencyHandlerExtension {
         File versionMappedJARFile = new File(versionFile, id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
         File versionMappedLibraries = new File(versionFile, "mappedLibraries");
 
+        try {
+            FileUtils.copyURLToFile(new URL("https://raw.githubusercontent.com/glassmc/data/main/kiln/mappings.json"), new File(pluginCache, "mappings.json"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         Util.setupMinecraft(id, version, pluginCache, new ObfuscatedMappingsProvider());
 
         try {

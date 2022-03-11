@@ -4,8 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
@@ -13,6 +12,7 @@ import java.util.zip.ZipFile;
 
 import com.github.glassmc.kiln.common.Pair;
 import org.apache.commons.io.FileUtils;
+import org.json.JSONObject;
 import org.objectweb.asm.commons.Remapper;
 
 import com.github.glassmc.kiln.standard.remapper.CSRGRemapper;
@@ -24,71 +24,6 @@ import com.github.glassmc.kiln.standard.remapper.UniqueRemapper;
 public class MCPMappingsProvider implements IMappingsProvider {
 
     private String version;
-    // A map of the most stable MCP mappings for each version.
-    private final Map<String, Pair<String, String>> mappings = new HashMap<String, Pair<String, String>>() {
-        {
-            put("1.7.10", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.7.10/mcp-1.7.10-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/12-1.7.10/mcp_stable-12-1.7.10.zip"
-            ));
-            put("1.8", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.8/mcp-1.8-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/18-1.8/mcp_stable-18-1.8.zip"
-            ));
-            put("1.8.8", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.8.8/mcp-1.8.8-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/20-1.8.8/mcp_stable-20-1.8.8.zip"
-            ));
-            put("1.8.9", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.8.9/mcp-1.8.9-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/22-1.8.9/mcp_stable-22-1.8.9.zip"
-            ));
-            put("1.9", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.9/mcp-1.9-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/24-1.9/mcp_stable-24-1.9.zip"
-            ));
-            put("1.9.2", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.9.2/mcp-1.9.2-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/24-1.9/mcp_stable-24-1.9.zip"
-            ));
-            put("1.9.4", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.9.4/mcp-1.9.4-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/26-1.9.4/mcp_stable-26-1.9.4.zip"
-            ));
-            put("1.10", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.10/mcp-1.10-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/29-1.10.2/mcp_stable-29-1.10.2.zip"
-            ));
-            put("1.10.2", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.10.2/mcp-1.10.2-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/29-1.10.2/mcp_stable-29-1.10.2.zip"
-            ));
-            put("1.11", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.11/mcp-1.11-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/32-1.11/mcp_stable-32-1.11.zip"
-            ));
-            put("1.11.1", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.11.1/mcp-1.11.1-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/32-1.11/mcp_stable-32-1.11.zip"
-            ));
-            put("1.11.2", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.11.2/mcp-1.11.2-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/32-1.11/mcp_stable-32-1.11.zip"
-            ));
-            put("1.12", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.12/mcp-1.12-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/39-1.12/mcp_stable-39-1.12.zip"
-            ));
-            put("1.12.1", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.12.1/mcp-1.12.1-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/39-1.12/mcp_stable-39-1.12.zip"
-            ));
-            put("1.12.2", Pair.of(
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp/1.12.2/mcp-1.12.2-csrg.zip",
-                    "https://maven.minecraftforge.net/de/oceanlabs/mcp/mcp_stable/39-1.12/mcp_stable-39-1.12.zip"
-            ));
-        }
-    };
 
     private HashRemapper searge;
     private ReversibleRemapper reversedSearge;
@@ -99,12 +34,22 @@ public class MCPMappingsProvider implements IMappingsProvider {
     public void setup(File minecraftFile, String version) throws NoSuchMappingsException {
         this.version = version;
 
-        File temp = new File(minecraftFile, "temp");
-        Pair<String, String> mappingURLs = mappings.get(version);
+        File mappingsJson = new File(minecraftFile.getParentFile().getParentFile(), "mappings.json");
+        JSONObject jsonObject = null;
+        try {
+            jsonObject = new JSONObject(FileUtils.readFileToString(mappingsJson, StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        if(mappingURLs == null) {
+        JSONObject mappings = jsonObject.getJSONObject("mcp").getJSONObject(version);
+
+        if (mappings == null) {
             throw new NoSuchMappingsException(version);
         }
+
+        File temp = new File(minecraftFile, "temp");
+        Pair<String, String> mappingURLs = new Pair<>(mappings.getString("srg"), mappings.getString("mcp"));
 
         URL seargeURL;
         URL namedURL;
@@ -188,6 +133,18 @@ public class MCPMappingsProvider implements IMappingsProvider {
     @Override
     public String getVersion() {
         return version;
+    }
+
+    @Override
+    public void clearCache(File minecraftFile) {
+        File temp = new File(minecraftFile, "temp");
+        try {
+            if (temp.exists()) {
+                FileUtils.cleanDirectory(temp);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

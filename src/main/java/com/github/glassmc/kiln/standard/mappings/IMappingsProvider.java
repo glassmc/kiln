@@ -9,6 +9,7 @@ public interface IMappingsProvider {
     Remapper getRemapper(Direction direction);
     String getID();
     String getVersion();
+    void clearCache(File minecraftFile);
 
     enum Direction {
         TO_NAMED,
