@@ -6,13 +6,13 @@ import java.net.URL;
 
 import org.apache.commons.io.FileUtils;
 import org.json.JSONObject;
-import org.objectweb.asm.commons.Remapper;
+import com.github.glassmc.kiln.standard.internalremapper.Remapper;
 
 import com.github.glassmc.kiln.common.Util;
-import com.github.glassmc.kiln.standard.remapper.HashRemapper;
 import com.github.glassmc.kiln.standard.remapper.ProGuardRemapper;
 import com.github.glassmc.kiln.standard.remapper.ReversibleRemapper;
 
+//TODO: Some kind of mojang-parchment mappings to get parameter remapping
 public class MojangMappingsProvider implements IMappingsProvider {
 
     private String version;

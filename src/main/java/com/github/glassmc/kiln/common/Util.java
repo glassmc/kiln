@@ -8,8 +8,8 @@ import org.json.JSONObject;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.commons.ClassRemapper;
-import org.objectweb.asm.commons.Remapper;
+import com.github.glassmc.kiln.standard.internalremapper.ClassRemapper;
+import com.github.glassmc.kiln.standard.internalremapper.Remapper;
 
 import java.io.*;
 import java.net.URL;
@@ -91,6 +91,11 @@ public class Util {
                     @Override
                     public String mapMethodName(String owner, String name, String descriptor) {
                         return remapper.mapMethodName(owner, name, descriptor);
+                    }
+
+                    @Override
+                    public String mapVariableName(String clazz, String method, String methodDesc, String name, int index) {
+                        return remapper.mapVariableName(clazz, method, methodDesc, name, index);
                     }
 
                 };

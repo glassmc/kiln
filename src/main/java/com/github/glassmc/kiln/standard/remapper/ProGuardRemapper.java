@@ -79,7 +79,7 @@ public class ProGuardRemapper {
             lineNumber++;
         }
 
-        return new HashRemapper(classNames, fieldNames, methodNames);
+        return new HashRemapper(classNames, fieldNames, methodNames, new HashMap<>());
     }
 
     private static String toDescriptor(String type) {

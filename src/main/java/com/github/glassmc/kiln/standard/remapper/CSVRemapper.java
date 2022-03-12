@@ -11,10 +11,11 @@ import org.apache.commons.csv.CSVRecord;
 
 public class CSVRemapper {
 
-    public static UniqueRemapper create(File classesFile, File fieldsFile, File methodsFile, String srcColumn, String dstColumn) throws IOException {
+    public static UniqueRemapper create(File classesFile, File fieldsFile, File methodsFile, File paramsFile, String srcColumn, String paramSrcColumn, String dstColumn) throws IOException {
         Map<String, String> classNames = new HashMap<>();
         Map<String, String> fieldNames = new HashMap<>();
         Map<String, String> methodNames = new HashMap<>();
+        Map<String, String> paramNames = new HashMap<>();
 
         if(classesFile != null) {
             classNames = toMap(classesFile, srcColumn, dstColumn);
@@ -25,8 +26,11 @@ public class CSVRemapper {
         if(methodsFile != null) {
             methodNames = toMap(methodsFile, srcColumn, dstColumn);
         }
+        if(paramsFile != null) {
+            paramNames = toMap(paramsFile, paramSrcColumn, dstColumn);
+        }
 
-        return new UniqueRemapper(classNames, fieldNames, methodNames);
+        return new UniqueRemapper(classNames, fieldNames, methodNames, paramNames);
     }
 
     private static Map<String, String> toMap(File file, String srcColumn, String dstColumn) throws IOException {

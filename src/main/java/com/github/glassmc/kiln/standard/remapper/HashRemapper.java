@@ -1,8 +1,5 @@
 package com.github.glassmc.kiln.standard.remapper;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,12 +10,13 @@ public class HashRemapper extends ReversibleRemapper {
     protected Map<String, String> classNames;
     protected Map<EntryTriple, String> fieldNames;
     protected Map<EntryTriple, String> methodNames;
+    protected Map<EntryTriple, Map<Integer, String>> variableNames;
 
-    public HashRemapper(Map<String, String> classNames, Map<EntryTriple, String> fieldNames,
-            Map<EntryTriple, String> methodNames) {
+    public HashRemapper(Map<String, String> classNames, Map<EntryTriple, String> fieldNames, Map<EntryTriple, String> methodNames, Map<EntryTriple, Map<Integer, String>> variableNames) {
         this.classNames = classNames;
         this.fieldNames = fieldNames;
         this.methodNames = methodNames;
+        this.variableNames = variableNames;
     }
 
     @Override
@@ -37,10 +35,19 @@ public class HashRemapper extends ReversibleRemapper {
     }
 
     @Override
+    public String mapVariableName(String owner, String methodOwner, String methodDesc, String name, int index) {
+        Map<Integer, String> methodVariable = variableNames.get(new EntryTriple(owner, methodOwner, methodDesc));
+        if (methodVariable == null) return name;
+
+        return methodVariable.getOrDefault(index, name);
+    }
+
+    @Override
     public HashRemapper reversed() {
         Map<String, String> reverseClassNames = new HashMap<>();
         Map<EntryTriple, String> reverseFieldNames = new HashMap<>();
         Map<EntryTriple, String> reverseMethodNames = new HashMap<>();
+        //Map<EntryTriple, Map<Integer, String >> reverseVariableNames = new HashMap<>();
 
         classNames.forEach((key, value) -> reverseClassNames.put(value, key));
 
@@ -54,7 +61,11 @@ public class HashRemapper extends ReversibleRemapper {
                 new EntryTriple(map(key.getOwner()), value, mapMethodDesc(key.getDescriptor())),
                 key.getName()));
 
-        return new HashRemapper(reverseClassNames, reverseFieldNames, reverseMethodNames);
+        /*variableNames.forEach((key, value) -> reverseVariableNames.computeIfAbsent(
+                new EntryTriple(map(key.getOwner()), mapMethodName(key.getOwner(), key.getName(), key.getDescriptor()), mapMethodDesc(key.getDescriptor())),
+                k -> new HashMap<>()));*/
+
+        return new HashRemapper(reverseClassNames, reverseFieldNames, reverseMethodNames, new HashMap<>());
     }
 
     public UniqueRemapper toUnique() {
@@ -68,7 +79,7 @@ public class HashRemapper extends ReversibleRemapper {
             methodNames.put(key.getName(), value);
         });
 
-        return new UniqueRemapper(methodNames, fieldNames, methodNames);
+        return new UniqueRemapper(methodNames, fieldNames, methodNames, new HashMap<>());
     }
 
 }

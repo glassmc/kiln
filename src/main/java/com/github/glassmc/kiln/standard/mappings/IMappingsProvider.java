@@ -1,6 +1,6 @@
 package com.github.glassmc.kiln.standard.mappings;
 
-import org.objectweb.asm.commons.Remapper;
+import com.github.glassmc.kiln.standard.internalremapper.Remapper;
 
 import java.io.File;
 

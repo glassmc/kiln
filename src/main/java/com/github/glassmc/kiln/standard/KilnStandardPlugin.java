@@ -6,8 +6,8 @@ import org.apache.commons.io.IOUtils;
 import org.gradle.api.*;
 import org.gradle.api.artifacts.Configuration;
 import org.objectweb.asm.*;
-import org.objectweb.asm.commons.ClassRemapper;
-import org.objectweb.asm.commons.Remapper;
+import com.github.glassmc.kiln.standard.internalremapper.ClassRemapper;
+import com.github.glassmc.kiln.standard.internalremapper.Remapper;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
@@ -85,6 +85,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
         return mappingsProviders;
     }
 
+    @NonNullApi
     private class ReobfuscateAction implements Action<Task> {
 
         @Override
@@ -234,6 +235,26 @@ public class KilnStandardPlugin implements Plugin<Project> {
                         return newName;
                     }
 
+                    @Override
+                    public String mapVariableName(String owner, String methodOwner, String methodDesc, String name, int index) {
+                        String newOwner;
+                        String nameVersion;
+                        if (owner.startsWith("v")) {
+                            newOwner = owner.substring(owner.indexOf("/") + 1);
+                            nameVersion = owner.substring(1, owner.indexOf("/")).replace("_", ".");
+                        } else {
+                            newOwner = owner;
+                            nameVersion = null;
+                        }
+
+                        String newName = name;
+                        for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
+                            if (remapper.getKey().getVersion().equals(nameVersion)) {
+                                newName = remapper.getValue().mapVariableName(newOwner, methodOwner, methodDesc, newName, index);
+                            }
+                        }
+                        return newName;
+                    }
                 };
 
                 Remapper realRemapper = new Remapper() {
@@ -306,6 +327,12 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
                         return newValue;
                     }
+
+                    @Override
+                    public String mapVariableName(String owner, String methodOwner, String methodDesc, String name, int index) {
+                        return collectiveRemapper.mapVariableName(owner, methodOwner, methodDesc, name, index);
+                    }
+
                 };
 
                 for(CustomTransformer customTransformer : extension.transformers) {

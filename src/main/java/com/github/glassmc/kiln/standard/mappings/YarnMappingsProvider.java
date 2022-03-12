@@ -5,7 +5,7 @@ import net.fabricmc.mapping.tree.*;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONObject;
 import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.commons.Remapper;
+import com.github.glassmc.kiln.standard.internalremapper.Remapper;
 import org.objectweb.asm.tree.ClassNode;
 
 import com.github.glassmc.kiln.standard.remapper.TinyRemapper;
@@ -119,6 +119,7 @@ public class YarnMappingsProvider implements IMappingsProvider {
             public String map(String name) {
                 return result.map(initial.map(name));
             }
+
             @Override
             public String mapMethodName(String owner, String name, String descriptor) {
                 for(ClassDef classDef : getClasses(getObfName(owner, direction, initial, result), direction)) {
@@ -145,6 +146,11 @@ public class YarnMappingsProvider implements IMappingsProvider {
                     }
                 }
                 return name;
+            }
+
+            @Override
+            public String mapVariableName(String owner, String methodOwner, String methodDesc, String name, int index) {
+                return result.mapVariableName(initial.map(owner), initial.mapMethodName(owner, methodOwner, methodDesc), initial.mapDesc(methodDesc), name, index);
             }
 
         };

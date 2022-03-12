@@ -1,6 +1,6 @@
 package com.github.glassmc.kiln.standard.remapper;
 
-import org.objectweb.asm.commons.Remapper;
+import com.github.glassmc.kiln.standard.internalremapper.Remapper;
 
 public abstract class ReversibleRemapper extends Remapper {
 

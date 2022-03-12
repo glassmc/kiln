@@ -10,16 +10,17 @@ public class UniqueRemapper extends ReversibleRemapper {
     protected Map<String, String> classNames;
     protected Map<String, String> fieldNames;
     protected Map<String, String> methodNames;
+    protected Map<String, String> variableNames;
 
     public UniqueRemapper() {
-        this(new HashMap<>(), new HashMap<>(), new HashMap<>());
+        this(new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>());
     }
 
-    public UniqueRemapper(Map<String, String> classNames, Map<String, String> fieldNames,
-            Map<String, String> methodNames) {
+    public UniqueRemapper(Map<String, String> classNames, Map<String, String> fieldNames, Map<String, String> methodNames, Map<String, String> variableNames) {
         this.classNames = classNames;
         this.fieldNames = fieldNames;
         this.methodNames = methodNames;
+        this.variableNames = variableNames;
     }
 
     @Override
@@ -38,6 +39,11 @@ public class UniqueRemapper extends ReversibleRemapper {
     }
 
     @Override
+    public String mapVariableName(String clazz, String method, String methodDesc, String name, int index) {
+        return variableNames.getOrDefault(name, name);
+    }
+
+    @Override
     public UniqueRemapper reversed() {
         Map<String, String> reverseClassNames = new HashMap<>();
         Map<String, String> reverseFieldNames = new HashMap<>();
@@ -47,7 +53,7 @@ public class UniqueRemapper extends ReversibleRemapper {
         fieldNames.forEach((key, value) -> reverseFieldNames.put(value, key));
         methodNames.forEach((key, value) -> reverseMethodNames.put(value, key));
 
-        return new UniqueRemapper(reverseClassNames, reverseFieldNames, reverseMethodNames);
+        return new UniqueRemapper(reverseClassNames, reverseFieldNames, reverseMethodNames, new HashMap<>());
     }
 
     public HashRemapper toNonUnique(HashRemapper from) {
@@ -82,7 +88,7 @@ public class UniqueRemapper extends ReversibleRemapper {
                     value);
         });
 
-        return new HashRemapper(classNames, fieldNames, methodNames);
+        return new HashRemapper(classNames, fieldNames, methodNames, new HashMap<>());
     }
 
 }
