@@ -39,6 +39,7 @@ public class KilnMainPlugin implements Plugin<Project> {
         for (Task task : project.getTasks()) {
             if (task.getName().startsWith("publish")) {
                 task.dependsOn(project.getTasks().getByName("shadowJar"));
+                task.dependsOn(project.getTasks().getByName("build"));
             }
         }
 

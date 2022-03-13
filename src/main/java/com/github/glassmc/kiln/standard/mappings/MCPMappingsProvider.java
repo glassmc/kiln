@@ -5,7 +5,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Objects;
+import java.util.*;
+import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -20,6 +21,9 @@ import com.github.glassmc.kiln.standard.remapper.CSVRemapper;
 import com.github.glassmc.kiln.standard.remapper.HashRemapper;
 import com.github.glassmc.kiln.standard.remapper.ReversibleRemapper;
 import com.github.glassmc.kiln.standard.remapper.UniqueRemapper;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.ClassNode;
 
 public class MCPMappingsProvider implements IMappingsProvider {
 
@@ -29,6 +33,8 @@ public class MCPMappingsProvider implements IMappingsProvider {
     private ReversibleRemapper reversedSearge;
     private UniqueRemapper named;
     private ReversibleRemapper reversedNamed;
+
+    private Map<String, List<String>> parentClasses;
 
     @Override
     public void setup(File minecraftFile, String version) throws NoSuchMappingsException {
@@ -96,6 +102,22 @@ public class MCPMappingsProvider implements IMappingsProvider {
             reversedSearge = searge.reversed();
             named = CSVRemapper.create(null, fieldMappings, methodMappings, paramMappings, "searge", "param", "name");
             reversedNamed = named.toNonUnique(searge).reversed();
+
+            this.parentClasses = new HashMap<>();
+            JarFile jarFile = new JarFile(new File(minecraftFile, "client-" + version + ".jar"));
+            Enumeration<JarEntry> entries = jarFile.entries();
+            while(entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                if(entry.getName().endsWith(".class")) {
+                    ClassNode classNode = new ClassNode();
+                    ClassReader classReader = new ClassReader(jarFile.getInputStream(entry));
+                    classReader.accept(classNode, 0);
+
+                    List<String> parents = parentClasses.computeIfAbsent(classNode.name, k -> new ArrayList<>());
+                    parents.add(classNode.superName);
+                    parents.addAll(classNode.interfaces);
+                }
+            }
         } catch(IOException e) {
             e.printStackTrace();
         }
@@ -103,8 +125,8 @@ public class MCPMappingsProvider implements IMappingsProvider {
 
     @Override
     public Remapper getRemapper(Direction direction) {
-        Remapper initial = direction == Direction.TO_NAMED ? searge : reversedNamed;
-        Remapper result = direction == Direction.TO_NAMED ? named : reversedSearge;
+        ReversibleRemapper initial = direction == Direction.TO_NAMED ? searge : reversedNamed;
+        ReversibleRemapper result = direction == Direction.TO_NAMED ? named : reversedSearge;
 
         return new Remapper() {
 
@@ -115,21 +137,39 @@ public class MCPMappingsProvider implements IMappingsProvider {
 
             @Override
             public String mapMethodName(String owner, String name, String descriptor) {
-                return result.mapMethodName(initial.map(owner), initial.mapMethodName(owner, name, descriptor),
-                        initial.mapDesc(descriptor));
+                for(String className : getClasses(getObfName(owner, direction, this), direction, initial, result)) {
+                    String newName = result.mapMethodName(initial.map(className), initial.mapMethodName(className, name, descriptor), initial.mapDesc(descriptor));
+                    if(!newName.equals(name)) {
+                        return newName;
+                    }
+                }
+                return name;
             }
 
             @Override
             public String mapFieldName(String owner, String name, String descriptor) {
-                return result.mapFieldName(initial.map(owner), initial.mapFieldName(owner, name, descriptor), "");
+                for(String className : getClasses(getObfName(owner, direction, this), direction, initial, result)) {
+                    String newName = result.mapFieldName(initial.map(className), initial.mapFieldName(className, name, descriptor), initial.mapDesc(descriptor));
+                    if(!newName.equals(name)) {
+                        return newName;
+                    }
+                }
+                return name;
             }
+
+            private final List<String> staticMethods = new ArrayList<>();
 
             @Override
             public String mapVariableName(String clazz, String method, String methodDesc, String name, int index) {
                 String newName = initial.mapVariableName(clazz, method, methodDesc, name, index);
                 String methodName = initial.mapMethodName(clazz, method, methodDesc);
 
-                if (newName.equals(name) && !name.equals("this") && methodName.startsWith("func_")) {
+                String fullIdentifier = clazz + "#" + method + methodDesc;
+                if (index == 0 && !name.equals("this")) {
+                    staticMethods.add(fullIdentifier);
+                }
+
+                if (newName.equals(name) && !name.equals("this") && methodName.startsWith("func_") && index < Type.getMethodType(methodDesc).getArgumentTypes().length + (staticMethods.contains(fullIdentifier) ? 0 : 1)) {
                     newName = "p_" + methodName.substring(methodName.indexOf("_") + 1, methodName.lastIndexOf("_")) + "_" + index + "_";
                 }
 
@@ -137,6 +177,33 @@ public class MCPMappingsProvider implements IMappingsProvider {
             }
 
         };
+    }
+
+    private List<String> getClasses(String obfName, Direction direction, ReversibleRemapper initial, ReversibleRemapper result) {
+        List<String> parents = new ArrayList<>();
+
+        if (direction == Direction.TO_NAMED) {
+            parents.add(obfName);
+        } else {
+            parents.add(initial.reversed().map(result.reversed().map(obfName)));
+        }
+
+        if(parentClasses.get(obfName) != null) {
+            for(String string : parentClasses.get(obfName)) {
+                parents.addAll(this.getClasses(string, direction, initial, result));
+            }
+        }
+
+        return parents;
+    }
+
+    private String getObfName(String name, Direction direction, Remapper remapper) {
+        if(direction == Direction.TO_NAMED) {
+            return name;
+        } else if(direction == Direction.TO_OBFUSCATED) {
+            return remapper.map(name);
+        }
+        return name;
     }
 
     @Override
