@@ -9,5 +9,6 @@ public abstract class KilnStandardExtension {
 
     public List<CustomTransformer> transformers = new ArrayList<>();
     public Environment environment = null;
+    public List<String> minecraft = new ArrayList<>();
 
 }

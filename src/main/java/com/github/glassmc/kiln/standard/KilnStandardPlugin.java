@@ -1,5 +1,6 @@
 package com.github.glassmc.kiln.standard;
 
+import com.github.glassmc.kiln.common.Util;
 import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar;
 import org.apache.commons.io.IOUtils;
@@ -44,11 +45,18 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
         this.setupShadowPlugin();
 
-        project.afterEvaluate(p -> p.getTasks().forEach(task -> {
-            if (task.getName().equals("shadowJar") || task.getName().equals("build")) {
-                task.doLast(new ReobfuscateAction());
+        project.afterEvaluate(p -> {
+            p.getTasks().forEach(task -> {
+                if (task.getName().equals("shadowJar") || task.getName().equals("build")) {
+                    task.doLast(new ReobfuscateAction());
+                }
+            });
+
+            for (String version : this.extension.minecraft) {
+                String[] split = version.split(":");
+                project.getDependencies().add("compileOnly", Util.minecraft(split[0], split[1], split[2]));
             }
-        }));
+        });
     }
 
     private void setupShadowPlugin() {

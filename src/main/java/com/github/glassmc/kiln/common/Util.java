@@ -1,8 +1,10 @@
 package com.github.glassmc.kiln.common;
 
-import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
+import com.github.glassmc.kiln.standard.KilnStandardPlugin;
+import com.github.glassmc.kiln.standard.mappings.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.gradle.api.file.FileCollection;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.objectweb.asm.ClassReader;
@@ -23,6 +25,58 @@ public class Util {
 
     private static JSONObject versions;
     private static final Map<String, JSONObject> versionsById = new HashMap<>();
+
+    public static FileCollection minecraft(String id, String version, String mappingsProviderId) {
+        KilnStandardPlugin plugin = KilnStandardPlugin.getInstance();
+        File pluginCache = plugin.getCache();
+
+        IMappingsProvider mappingsProvider;
+        switch(mappingsProviderId) {
+            case "yarn":
+                mappingsProvider = new YarnMappingsProvider();
+                break;
+            case "mojang":
+                mappingsProvider = new MojangMappingsProvider();
+                break;
+            case "mcp":
+                mappingsProvider = new MCPMappingsProvider();
+                break;
+            case "obfuscated":
+            default:
+                mappingsProvider = new ObfuscatedMappingsProvider();
+        }
+        plugin.addMappingsProvider(mappingsProvider);
+
+        List<String> filesToDepend = new ArrayList<>();
+
+        File minecraftFile = new File(pluginCache, "minecraft");
+        File versionFile = new File(minecraftFile, version);
+        File versionMappedJARFile = new File(versionFile, id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
+        File versionMappedLibraries = new File(versionFile, "mappedLibraries");
+
+        try {
+            FileUtils.copyURLToFile(new URL("https://raw.githubusercontent.com/glassmc/data/main/kiln/mappings.json"), new File(pluginCache, "mappings.json"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Util.setupMinecraft(id, version, pluginCache, new ObfuscatedMappingsProvider());
+
+        try {
+            mappingsProvider.setup(versionFile, version);
+        } catch (NoSuchMappingsException e) {
+            e.printStackTrace();
+        }
+
+        Util.setupMinecraft(id, version, pluginCache, mappingsProvider);
+
+        filesToDepend.add(versionMappedJARFile.getAbsolutePath());
+        for (File file : Objects.requireNonNull(versionMappedLibraries.listFiles())) {
+            filesToDepend.add(file.getAbsolutePath());
+        }
+
+        return plugin.getProject().files(filesToDepend.toArray());
+    }
 
     public static File setupMinecraft(String id, String version, File pluginCache, IMappingsProvider mappingsProvider) {
         File minecraftFile = new File(pluginCache, "minecraft");
