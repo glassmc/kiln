@@ -1,5 +1,6 @@
 package com.github.glassmc.kiln.standard;
 
+import com.github.glassmc.kiln.common.Pair;
 import com.github.glassmc.kiln.common.Util;
 import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar;
@@ -57,6 +58,11 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 project.getDependencies().add("compileOnly", Util.minecraft(split[0], split[1], split[2]));
             }
         });
+
+        if (!project.getRootProject().equals(project)) {
+            project.getRootProject().getTasks().getByName("shadowJar").dependsOn(project.getTasks().getByName("shadowJar"));
+            project.getRootProject().getTasks().getByName("build").dependsOn(project.getTasks().getByName("build"));
+        }
     }
 
     private void setupShadowPlugin() {
@@ -93,12 +99,37 @@ public class KilnStandardPlugin implements Plugin<Project> {
         return mappingsProviders;
     }
 
+    private void addAllMappingsProviders(Project project, List<IMappingsProvider> mappingsProviders) {
+        KilnStandardPlugin plugin = project.getPlugins().findPlugin(KilnStandardPlugin.class);
+        if (plugin != null) {
+            mappingsProviders.addAll(plugin.getMappingsProviders());
+        }
+
+        for (Project project1 : project.getChildProjects().values()) {
+            this.addAllMappingsProviders(project1, mappingsProviders);
+        }
+    }
+
+    private void addAllTransformers(Project project, List<Pair<Project, CustomTransformer>> customTransformers) {
+        KilnStandardExtension extension = project.getExtensions().findByType(KilnStandardExtension.class);
+        if (extension != null) {
+            for (CustomTransformer transformer : extension.transformers) {
+                customTransformers.add(new Pair<>(project, transformer));
+            }
+        }
+
+        for (Project project1 : project.getChildProjects().values()) {
+            this.addAllTransformers(project1, customTransformers);
+        }
+    }
+
     @NonNullApi
     private class ReobfuscateAction implements Action<Task> {
 
         @Override
         public void execute(Task task) {
-            List<IMappingsProvider> mappingsProviders = getMappingsProviders();
+            List<IMappingsProvider> mappingsProviders = new ArrayList<>();
+            addAllMappingsProviders(project, mappingsProviders);
 
             Map<String, ClassNode> classNodes = new HashMap<>();
             Map<String, byte[]> resources = new HashMap<>();
@@ -343,9 +374,25 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
                 };
 
-                for(CustomTransformer customTransformer : extension.transformers) {
-                    customTransformer.setRemapper(collectiveRemapper);
-                    customTransformer.map(classNodes);
+                List<Pair<Project, CustomTransformer>> transformers = new ArrayList<>();
+                addAllTransformers(project, transformers);
+
+                for(Pair<Project, CustomTransformer> customTransformer : transformers) {
+                    customTransformer.getRight().setRemapper(collectiveRemapper);
+
+                    Map<String, ClassNode> classNodes2 = new HashMap<>(classNodes);
+
+                    classNodes2.entrySet().removeIf(pair -> {
+                        for (String language : Objects.requireNonNull(new File(customTransformer.getLeft().getBuildDir() + "/classes").list())) {
+                            if (new File(customTransformer.getLeft().getBuildDir(), "classes/" + language + "/main/" + pair.getKey() + ".class").exists()) {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    });
+
+                    customTransformer.getRight().map(classNodes2);
                 }
 
                 for(Map.Entry<String, ClassNode> entry : classNodes.entrySet()) {

@@ -6,6 +6,7 @@ import com.github.glassmc.kiln.standard.KilnStandardExtension;
 import com.github.glassmc.kiln.standard.environment.Environment;
 import com.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
 import org.gradle.api.DefaultTask;
+import org.gradle.api.Project;
 import org.gradle.api.tasks.TaskAction;
 import org.json.JSONObject;
 
@@ -56,12 +57,8 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         Environment environment1 = extension.environment;
         vmArgsBuilder.append(String.join(File.pathSeparator, environment1.getRuntimeDependencies(KilnMainPlugin.getInstance().getCache()))).append(File.pathSeparator);
 
-        File shadedJar = new File(this.getProject().getBuildDir(), "libs/" + this.getProject().getName() + "-all-mapped.jar");
-        if (!shadedJar.exists()) {
-            shadedJar = new File(this.getProject().getBuildDir(), "libs/" + this.getProject().getName() + "-" + this.getProject().getVersion() + "-all-mapped.jar");
-        }
+        this.appendProjectBuild(this.getProject(), vmArgsBuilder);
 
-        vmArgsBuilder.append(shadedJar.getAbsolutePath()).append(File.pathSeparator);
         vmArgsBuilder.append("$Classpath$");
 
         vmArgsBuilder.append(" -Djava.library.path=").append(natives.getAbsolutePath());
@@ -109,6 +106,20 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
         File run = new File("run");
         run.mkdirs();
+    }
+
+    private void appendProjectBuild(Project project, StringBuilder stringBuilder) {
+        File shadedJar = new File(project.getBuildDir(), "libs/" + project.getName() + "-all-mapped.jar");
+
+        stringBuilder.append(shadedJar.getAbsolutePath()).append(File.pathSeparator);
+
+        shadedJar = new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar");
+
+        stringBuilder.append(shadedJar.getAbsolutePath()).append(File.pathSeparator);
+
+        //for (Project subProject : project.getChildProjects().values()) {
+        //    this.appendProjectBuild(subProject, stringBuilder);
+        //}
     }
 
 }

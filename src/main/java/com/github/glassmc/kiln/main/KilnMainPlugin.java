@@ -48,6 +48,8 @@ public class KilnMainPlugin implements Plugin<Project> {
 
         this.setupShadow();
 
+        this.appendProject(project, project);
+
         project.afterEvaluate(project1 -> {
             publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> {
                 publication.from(project.getComponents().getByName("java"));
@@ -56,8 +58,22 @@ public class KilnMainPlugin implements Plugin<Project> {
                 PublishArtifact artifact = project.getArtifacts().add("archives", file.get().getAsFile());
 
                 publication.artifact(artifact);
+
+                file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar");
+                artifact = project.getArtifacts().add("archives", file.get().getAsFile());
+
+                publication.artifact(artifact);
             });
         });
+    }
+
+    private void appendProject(Project mainProject, Project project) {
+        mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all.jar").getAbsolutePath()));
+        mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar").getAbsolutePath()));
+
+        for (Project subProject : project.getChildProjects().values()) {
+            this.appendProject(mainProject, subProject);
+        }
     }
 
     private void setupShadow() {
