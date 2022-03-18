@@ -68,8 +68,10 @@ public class KilnMainPlugin implements Plugin<Project> {
     }
 
     private void appendProject(Project mainProject, Project project) {
-        mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all.jar").getAbsolutePath()));
-        mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar").getAbsolutePath()));
+        if (mainProject != project) {
+            mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all.jar").getAbsolutePath()));
+            mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar").getAbsolutePath()));
+        }
 
         for (Project subProject : project.getChildProjects().values()) {
             this.appendProject(mainProject, subProject);

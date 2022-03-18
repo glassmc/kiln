@@ -88,6 +88,8 @@ public class Util {
             try {
                 JSONObject versionManifest = getVersionManifest(version);
 
+                List<String> prefixClasses = new ArrayList<>();
+
                 if(id.equals("client")) {
                     File versionLibraries = new File(versionFile, "libraries");
                     File versionMappedLibraries = new File(versionFile, "mappedLibraries");
@@ -111,6 +113,18 @@ public class Util {
                         System.out.printf("Downloading %s assets...%n", version);
                         downloadAssets(versionManifest, assets);
                     }
+
+                    for (File mappedLibrary : versionMappedLibraries.listFiles()) {
+                        JarFile jarFile = new JarFile(mappedLibrary);
+                        Enumeration<JarEntry> entries = jarFile.entries();
+
+                        while (entries.hasMoreElements()) {
+                            JarEntry entry = entries.nextElement();
+                            if (entry.getName().endsWith(".class")) {
+                                prefixClasses.add(entry.getName().replace(".class", ""));
+                            }
+                        }
+                    }
                 }
 
                 if (!versionJARFile.exists()) {
@@ -130,7 +144,7 @@ public class Util {
                     @Override
                     public String map(String name) {
                         String mapped = remapper.map(name);
-                        if (input.getJarEntry(name + ".class") != null && mappingsProvider.getVersion() != null) {
+                        if ((input.getJarEntry(name + ".class") != null || prefixClasses.contains("v" + version.replace(".", "_") + "/" + mapped)) && mappingsProvider.getVersion() != null) {
                             return "v" + version.replace(".", "_") + "/" + mapped;
                         } else {
                             return name;
