@@ -57,8 +57,6 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         Environment environment1 = extension.environment;
         vmArgsBuilder.append(String.join(File.pathSeparator, environment1.getRuntimeDependencies(KilnMainPlugin.getInstance().getCache()))).append(File.pathSeparator);
 
-        this.appendProjectBuild(this.getProject(), vmArgsBuilder);
-
         vmArgsBuilder.append("$Classpath$");
 
         vmArgsBuilder.append(" -Djava.library.path=").append(natives.getAbsolutePath());
@@ -89,8 +87,8 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
                 "    <option name=\"VM_PARAMETERS\" value=\"%s\" />\n" +
                 "    <option name=\"WORKING_DIRECTORY\" value=\"run\" />\n" +
                 "    <method v=\"2\">\n" +
-                "      <option name=\"Gradle.BeforeRunTask\" enabled=\"true\" tasks=\"shadowJar\" externalProjectPath=\"$PROJECT_DIR$\" vmOptions=\"\" scriptParameters=\"\" />\n" +
-                "    </method>\n" +
+                "      <option name=\"Make\" enabled=\"true\" />\n" +
+                "    </method>" +
                 "  </configuration>\n" +
                 "</component>";
 
@@ -106,20 +104,6 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
         File run = new File("run");
         run.mkdirs();
-    }
-
-    private void appendProjectBuild(Project project, StringBuilder stringBuilder) {
-        File shadedJar = new File(project.getBuildDir(), "libs/" + project.getName() + "-all-mapped.jar");
-
-        stringBuilder.append(shadedJar.getAbsolutePath()).append(File.pathSeparator);
-
-        shadedJar = new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar");
-
-        stringBuilder.append(shadedJar.getAbsolutePath()).append(File.pathSeparator);
-
-        //for (Project subProject : project.getChildProjects().values()) {
-        //    this.appendProjectBuild(subProject, stringBuilder);
-        //}
     }
 
 }

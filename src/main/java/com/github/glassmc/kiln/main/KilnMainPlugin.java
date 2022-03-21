@@ -53,16 +53,6 @@ public class KilnMainPlugin implements Plugin<Project> {
         project.afterEvaluate(project1 -> {
             publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> {
                 publication.from(project.getComponents().getByName("java"));
-
-                Provider<RegularFile> file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-" + project.getVersion() + "-mapped.jar");
-                PublishArtifact artifact = project.getArtifacts().add("archives", file.get().getAsFile());
-
-                publication.artifact(artifact);
-
-                file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar");
-                artifact = project.getArtifacts().add("archives", file.get().getAsFile());
-
-                publication.artifact(artifact);
             });
         });
     }
