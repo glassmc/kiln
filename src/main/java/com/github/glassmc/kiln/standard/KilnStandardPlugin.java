@@ -14,8 +14,10 @@ import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
 import java.util.stream.Collectors;
 
@@ -128,6 +130,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
         @Override
         public void execute(Task task) {
+            long reobfuscationStart = System.currentTimeMillis();
             List<IMappingsProvider> mappingsProviders = new ArrayList<>();
             addAllMappingsProviders(project, mappingsProviders);
 
@@ -157,25 +160,28 @@ public class KilnStandardPlugin implements Plugin<Project> {
             }
 
             for (File file : files) {
+
                 try {
-                    JarFile jarFile = new JarFile(file);
-                    Enumeration<JarEntry> entries = jarFile.entries();
+                    JarInputStream jarInputStream = new JarInputStream(new FileInputStream(file));
 
-                    while (entries.hasMoreElements()) {
-                        JarEntry entry = entries.nextElement();
-
-                        InputStream inputStream = jarFile.getInputStream(entry);
+                    JarEntry entry = jarInputStream.getNextJarEntry();
+                    while (entry != null) {
+                        byte[] data = IOUtils.toByteArray(jarInputStream);
 
                         if (entry.getName().endsWith(".class")) {
-                            ClassReader classReader = new ClassReader(IOUtils.readFully(inputStream, inputStream.available()));
+                            ClassReader classReader = new ClassReader(data);
                             ClassNode classNode = new ClassNode();
                             classReader.accept(classNode, 0);
 
                             classNodes.put(classNode.name, classNode);
                         } else {
-                            resources.put(entry.getName(), IOUtils.readFully(inputStream, inputStream.available()));
+                            resources.put(entry.getName(), data);
                         }
+
+                        entry = jarInputStream.getNextJarEntry();
                     }
+
+                    jarInputStream.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -201,76 +207,101 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
                 Remapper collectiveRemapper = new Remapper() {
 
+                    private final Map<String, String> cache = new HashMap<>();
+
                     @Override
                     public String map(String name) {
-                        String newName;
-                        String nameVersion;
-                        if (name.startsWith("v")) {
-                            newName = name.substring(name.indexOf("/") + 1);
-                            nameVersion = name.substring(1, name.indexOf("/")).replace("_", ".");
-                        } else {
-                            newName = name;
-                            nameVersion = null;
-                        }
-                        for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
-                            if (remapper.getKey().getVersion().equals(nameVersion)) {
-                                newName = remapper.getValue().map(newName);
+                        String newName = cache.get(name);
+
+                        if (newName == null) {
+                            String nameVersion;
+                            if (name.startsWith("v")) {
+                                newName = name.substring(name.indexOf("/") + 1);
+                                nameVersion = name.substring(1, name.indexOf("/")).replace("_", ".");
+                            } else {
+                                return name;
                             }
+                            for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
+                                if (remapper.getKey().getVersion().equals(nameVersion)) {
+                                    newName = remapper.getValue().map(newName);
+                                }
+                            }
+                            cache.put(name, newName);
                         }
+
                         return newName;
                     }
 
                     @Override
                     public String mapFieldName(String owner, String name, String descriptor) {
-                        String newOwner;
-                        String nameVersion;
-                        if (owner.startsWith("v")) {
-                            newOwner = owner.substring(owner.indexOf("/") + 1);
-                            nameVersion = owner.substring(1, owner.indexOf("/")).replace("_", ".");
-                        } else {
-                            newOwner = owner;
-                            nameVersion = null;
-                        }
-                        String newName = name;
-                        for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
-                            if (remapper.getKey().getVersion().equals(nameVersion)) {
-                                newName = remapper.getValue().mapFieldName(newOwner, newName, descriptor);
+                        String newName = cache.get(owner + name + descriptor);
+
+                        if (newName == null) {
+                            String newOwner;
+                            String nameVersion;
+                            if (owner.startsWith("v")) {
+                                newOwner = owner.substring(owner.indexOf("/") + 1);
+                                nameVersion = owner.substring(1, owner.indexOf("/")).replace("_", ".");
+                            } else {
+                                return name;
+                                //newOwner = owner;
+                                //nameVersion = null;
                             }
+                            newName = name;
+                            for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
+                                if (remapper.getKey().getVersion().equals(nameVersion)) {
+                                    newName = remapper.getValue().mapFieldName(newOwner, newName, descriptor);
+                                }
+                            }
+
+                            cache.put(owner + name + descriptor, newName);
                         }
+
                         return newName;
                     }
 
                     @Override
                     public String mapMethodName(String owner, String name, String descriptor) {
-                        List<String> parents = classesMap.get(owner);
-                        if (parents == null) {
-                            parents = new ArrayList<>();
-                        }
-                        parents.add(owner);
+                        String newName = cache.get(owner + name + descriptor);
 
-                        String nameVersion = null;
-                        for (String classString : new ArrayList<>(parents)) {
-                            if (classString.startsWith("v")) {
-                                String newClassString = classString.substring(classString.indexOf("/") + 1);
-                                parents.replaceAll(string -> {
-                                    if (string.equals(classString)) {
-                                        return newClassString;
-                                    }
-                                    return classString;
-                                });
-                                nameVersion = classString.substring(1, classString.indexOf("/")).replace("_", ".");
+                        if (newName == null) {
+                            List<String> parents = classesMap.get(owner);
+                            if (parents == null) {
+                                parents = new ArrayList<>();
+                            } else {
+                                parents = new ArrayList<>(parents);
                             }
-                        }
+                            parents.add(owner);
 
-                        String newName = name;
-
-                        for (String classString : parents) {
-                            for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
-                                if (remapper.getKey().getVersion().equals(nameVersion)) {
-                                    newName = remapper.getValue().mapMethodName(classString, newName, versionRemover.mapDesc(descriptor));
+                            String nameVersion = null;
+                            for (String classString : new ArrayList<>(parents)) {
+                                if (classString.startsWith("v")) {
+                                    String newClassString = classString.substring(classString.indexOf("/") + 1);
+                                    parents.replaceAll(string -> {
+                                        if (string.equals(classString)) {
+                                            return newClassString;
+                                        }
+                                        return classString;
+                                    });
+                                    nameVersion = classString.substring(1, classString.indexOf("/")).replace("_", ".");
+                                } else {
+                                    return name;
                                 }
                             }
+
+                            newName = name;
+
+                            for (String classString : parents) {
+                                for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
+                                    if (remapper.getKey().getVersion().equals(nameVersion)) {
+                                        newName = remapper.getValue().mapMethodName(classString, newName, versionRemover.mapDesc(descriptor));
+                                    }
+                                }
+                            }
+
+                            cache.put(owner + name + descriptor, newName);
                         }
+
                         return newName;
                     }
 
