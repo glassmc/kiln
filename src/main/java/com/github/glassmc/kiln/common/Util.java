@@ -4,7 +4,6 @@ import com.github.glassmc.kiln.standard.KilnStandardPlugin;
 import com.github.glassmc.kiln.standard.mappings.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.gradle.api.file.FileCollection;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.objectweb.asm.ClassReader;
@@ -26,7 +25,7 @@ public class Util {
     private static JSONObject versions;
     private static final Map<String, JSONObject> versionsById = new HashMap<>();
 
-    public static FileCollection minecraft(String id, String version, String mappingsProviderId) {
+    public static void minecraft(String id, String version, String mappingsProviderId) {
         KilnStandardPlugin plugin = KilnStandardPlugin.getInstance();
         File pluginCache = plugin.getCache();
 
@@ -47,12 +46,8 @@ public class Util {
         }
         plugin.addMappingsProvider(mappingsProvider);
 
-        List<String> filesToDepend = new ArrayList<>();
-
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
-        File versionMappedJARFile = new File(versionFile, id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
-        File versionMappedLibraries = new File(versionFile, "mappedLibraries");
 
         try {
             FileUtils.copyURLToFile(new URL("https://raw.githubusercontent.com/glassmc/data/main/kiln/mappings.json"), new File(pluginCache, "mappings.json"));
@@ -69,41 +64,32 @@ public class Util {
         }
 
         Util.setupMinecraft(id, version, pluginCache, mappingsProvider);
-
-        filesToDepend.add(versionMappedJARFile.getAbsolutePath());
-        for (File file : Objects.requireNonNull(versionMappedLibraries.listFiles())) {
-            filesToDepend.add(file.getAbsolutePath());
-        }
-
-        return plugin.getProject().files(filesToDepend.toArray());
     }
 
     public static File setupMinecraft(String id, String version, File pluginCache, IMappingsProvider mappingsProvider) {
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
         File versionJARFile = new File(versionFile, id + "-" + version + ".jar");
-        File versionMappedJARFile = new File(versionFile, id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
+        File localMaven = new File(versionFile, "localMaven");
+        File versionMappedJARFile = new File(localMaven, "net/minecraft/" + id + "/" + version + "/" + id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
 
         if (!versionMappedJARFile.exists()) {
             try {
                 JSONObject versionManifest = getVersionManifest(version);
 
                 List<String> prefixClasses = new ArrayList<>();
+                List<String[]> dependencies = new ArrayList<>();
 
                 if(id.equals("client")) {
                     File versionLibraries = new File(versionFile, "libraries");
-                    File versionMappedLibraries = new File(versionFile, "mappedLibraries");
+                    //File versionMappedLibraries = new File(versionFile, "mappedLibraries");
                     File versionNatives = new File(versionFile, "natives");
                     File assets = new File(versionFile, "assets");
 
                     if (!versionLibraries.exists()) {
                         System.out.printf("Downloading %s libraries...%n", version);
                         downloadLibraries(versionManifest, versionLibraries);
-                    }
-
-                    if (!versionMappedLibraries.exists()) {
-                        System.out.printf("Mapping %s libraries...%n", version);
-                        mapLibraries(versionLibraries, versionMappedLibraries, version);
+                        mapLibraries(versionManifest, versionLibraries, localMaven, version);
                     }
 
                     if (!versionNatives.exists()) {
@@ -116,7 +102,22 @@ public class Util {
                         downloadAssets(versionManifest, assets);
                     }
 
-                    for (File mappedLibrary : versionMappedLibraries.listFiles()) {
+                    Map<String, String> libraries = new HashMap<>();
+
+                    for (Object library : versionManifest.getJSONArray("libraries")) {
+                        JSONObject libraryJSON = (JSONObject) library;
+                        JSONObject downloads = libraryJSON.getJSONObject("downloads");
+                        if (downloads.has("artifact")) {
+                            String url = downloads.getJSONObject("artifact").getString("url");
+                            url = url.substring(url.lastIndexOf("/") + 1);
+
+                            String id2 = libraryJSON.getString("name");
+
+                            libraries.put(url, id2);
+                        }
+                    }
+
+                    for (File mappedLibrary : versionLibraries.listFiles()) {
                         JarFile jarFile = new JarFile(mappedLibrary);
                         Enumeration<JarEntry> entries = jarFile.entries();
 
@@ -126,6 +127,8 @@ public class Util {
                                 prefixClasses.add(entry.getName().replace(".class", ""));
                             }
                         }
+
+                        dependencies.add(libraries.get(mappedLibrary.getName()).split(":"));
                     }
                 }
 
@@ -146,7 +149,7 @@ public class Util {
                     @Override
                     public String map(String name) {
                         String mapped = remapper.map(name);
-                        if ((input.getJarEntry(name + ".class") != null || prefixClasses.contains("v" + version.replace(".", "_") + "/" + mapped)) && mappingsProvider.getVersion() != null) {
+                        if ((input.getJarEntry(name + ".class") != null || prefixClasses.contains(mapped)) && mappingsProvider.getVersion() != null) {
                             return "v" + version.replace(".", "_") + "/" + mapped;
                         } else {
                             return name;
@@ -170,6 +173,7 @@ public class Util {
 
                 };
 
+                versionMappedJARFile.getParentFile().mkdirs();
                 JarOutputStream outputStream = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(versionMappedJARFile)));
 
                 Enumeration<JarEntry> entries = input.entries();
@@ -193,6 +197,25 @@ public class Util {
                     }
                 }
                 outputStream.close();
+
+                File versionPom = new File(versionMappedJARFile.getParentFile(), id + "-" + version + ".pom");
+                StringBuilder string =
+                        new StringBuilder(
+                                "<project>\n" +
+                                "    <modelVersion>4.0.0</modelVersion>\n" +
+                                "\n" +
+                                "    <groupId>net.minecraft</groupId>\n" +
+                                "    <artifactId>" + id + "</artifactId>\n" +
+                                "    <version>" + version + "</version>\n" +
+                                "    <dependencies>\n");
+
+                for (String[] dependency : dependencies) {
+                    string.append("        <dependency>\n" + "            <groupId>").append(dependency[0]).append("</groupId>\n").append("            <artifactId>").append(dependency[1]).append("</artifactId>\n").append("            <version>").append(dependency[2]).append("</version>\n").append("        </dependency>\n");
+                }
+
+                string.append("    </dependencies>\n" + "</project>\n");
+
+                FileUtils.writeStringToFile(versionPom, string.toString(), StandardCharsets.UTF_8);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -201,9 +224,7 @@ public class Util {
         return versionMappedJARFile;
     }
 
-    private static void mapLibraries(File versionLibraries, File versionMappedLibraries, String version) throws IOException {
-        versionMappedLibraries.mkdirs();
-
+    private static void mapLibraries(JSONObject versionManifest, File versionLibraries, File localMaven, String version) throws IOException {
         List<String> names = new ArrayList<>();
 
         for (File library : Objects.requireNonNull(versionLibraries.listFiles())) {
@@ -218,8 +239,27 @@ public class Util {
             }
         }
 
+        Map<String, String> libraries = new HashMap<>();
+
+        for (Object library : versionManifest.getJSONArray("libraries")) {
+            JSONObject libraryJSON = (JSONObject) library;
+            JSONObject downloads = libraryJSON.getJSONObject("downloads");
+            if (downloads.has("artifact")) {
+                String url = downloads.getJSONObject("artifact").getString("url");
+                url = url.substring(url.lastIndexOf("/") + 1);
+
+                String id = libraryJSON.getString("name");
+
+                libraries.put(url, id);
+            }
+        }
+
         for (File library : Objects.requireNonNull(versionLibraries.listFiles())) {
-            JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(new File(versionMappedLibraries, library.getName())));
+            String[] id = libraries.get(library.getName()).split(":");
+            File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "/" + id[2] + "/" + id[1] + "-" + id[2] + ".jar");
+            file.getParentFile().mkdirs();
+
+            JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(file));
 
             JarFile jarFile = new JarFile(library);
             Enumeration<JarEntry> entries = jarFile.entries();
@@ -261,6 +301,15 @@ public class Util {
             }
 
             jarOutputStream.close();
+
+            File versionPom = new File(file.getParentFile(), file.getName().replace(".jar", ".pom"));
+            FileUtils.writeStringToFile(versionPom, "<project>\n" +
+                    "    <modelVersion>4.0.0</modelVersion>\n" +
+                    "\n" +
+                    "    <groupId>" + id[0] + "</groupId>\n" +
+                    "    <artifactId>" + id[1] + "</artifactId>\n" +
+                    "    <version>" + id[2] + "</version>\n" +
+                    "</project>\n", StandardCharsets.UTF_8);
         }
     }
 

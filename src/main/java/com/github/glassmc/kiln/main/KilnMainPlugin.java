@@ -28,32 +28,32 @@ public class KilnMainPlugin implements Plugin<Project> {
         instance = this;
         this.project = project;
 
-        project.getPlugins().apply("maven-publish");
+        //project.getPlugins().apply("maven-publish");
         project.getPlugins().apply("kiln-standard");
 
-        PublishingExtension publishing = (PublishingExtension) project.getExtensions().getByName("publishing");
+        //PublishingExtension publishing = (PublishingExtension) project.getExtensions().getByName("publishing");
 
-        for (Task task : project.getTasks()) {
+        /*for (Task task : project.getTasks()) {
             if (task.getName().startsWith("publish")) {
                 task.dependsOn(project.getTasks().getByName("shadowJar"));
                 task.dependsOn(project.getTasks().getByName("build"));
             }
-        }
+        }*/
 
         project.getTasks().register("genRunConfiguration", GenerateRunConfiguration.class);
         project.getTasks().register("clearMappings", ClearMappings.class);
 
-        this.setupShadow();
+        //this.setupShadow();
 
         this.appendProject(project, project);
 
-        project.afterEvaluate(project1 -> publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> publication.from(project.getComponents().getByName("java"))));
+        //project.afterEvaluate(project1 -> publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> publication.from(project.getComponents().getByName("java"))));
     }
 
     private void appendProject(Project mainProject, Project project) {
         if (mainProject != project && project.getBuildFile().exists()) {
             String displayName = project.getDisplayName();
-            mainProject.getDependencies().add("shadowRuntime", mainProject.project(displayName.substring(displayName.indexOf("'") + 1, displayName.lastIndexOf("'"))));
+            mainProject.getDependencies().add("runtimeOnly", mainProject.project(displayName.substring(displayName.indexOf("'") + 1, displayName.lastIndexOf("'"))));
             //mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all.jar").getAbsolutePath()));
             //mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar").getAbsolutePath()));
         }

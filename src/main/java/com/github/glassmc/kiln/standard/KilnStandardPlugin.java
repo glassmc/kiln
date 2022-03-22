@@ -4,9 +4,16 @@ import com.github.glassmc.kiln.common.Pair;
 import com.github.glassmc.kiln.common.Util;
 import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar;
+import groovy.lang.Closure;
 import org.apache.commons.io.IOUtils;
 import org.gradle.api.*;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.Dependency;
+import org.gradle.api.artifacts.dsl.RepositoryHandler;
+import org.gradle.api.internal.artifacts.dependencies.AbstractDependency;
+import org.gradle.api.internal.artifacts.dependencies.AbstractModuleDependency;
+import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependency;
+import org.gradle.api.internal.artifacts.repositories.DefaultMavenArtifactRepository;
 import org.objectweb.asm.*;
 import com.github.glassmc.kiln.standard.internalremapper.ClassRemapper;
 import com.github.glassmc.kiln.standard.internalremapper.Remapper;
@@ -14,9 +21,6 @@ import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
 import java.util.*;
-import java.util.jar.JarEntry;
-import java.util.jar.JarInputStream;
-import java.util.jar.JarOutputStream;
 import java.util.stream.Collectors;
 
 public class KilnStandardPlugin implements Plugin<Project> {
@@ -44,9 +48,27 @@ public class KilnStandardPlugin implements Plugin<Project> {
         project.getPlugins().apply("java-library");
         project.getTasks().getByName("compileJava").dependsOn(project.getTasks().getByName("processResources"));
 
-        this.setupShadowPlugin();
+        //this.setupShadowPlugin();
+
+        for (File file : Objects.requireNonNull(new File(this.getCache(), "minecraft").listFiles())) {
+            project.getRepositories().maven(action -> {
+                action.setUrl(new File(file, "localMaven"));
+            });
+        }
 
         project.afterEvaluate(p -> {
+            for (Configuration configuration : project.getConfigurations()) {
+                for (Dependency dependency : configuration.getDependencies()) {
+                    if (dependency.getGroup().equals("net.minecraft")) {
+                        AbstractModuleDependency projectDependency = (AbstractModuleDependency) dependency;
+
+                        String classifier = projectDependency.getArtifacts().stream().findFirst().get().getClassifier();
+
+                        Util.minecraft(dependency.getName(), dependency.getVersion(), classifier);
+                    }
+                }
+            }
+
             p.getTasks().forEach(task -> {
                 /*if (task.getName().equals("shadowJar") || task.getName().equals("build")) {
                     task.doLast(new ReobfuscateAction());
@@ -55,11 +77,6 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     task.doLast(new ReobfuscateAction2());
                 }
             });
-
-            for (String version : this.extension.minecraft) {
-                String[] split = version.split(":");
-                project.getDependencies().add("compileOnly", Util.minecraft(split[0], split[1], split[2]));
-            }
         });
 
         if (!project.getRootProject().equals(project)) {
@@ -126,7 +143,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
         }
     }
 
-    @NonNullApi
+    /*@NonNullApi
     private class ReobfuscateAction implements Action<Task> {
 
         @Override
@@ -467,7 +484,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
             }
         }
 
-    }
+    }*/
 
     @NonNullApi
     private class ReobfuscateAction2 implements Action<Task> {
