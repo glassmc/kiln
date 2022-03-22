@@ -60,11 +60,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
             for (Configuration configuration : project.getConfigurations()) {
                 for (Dependency dependency : configuration.getDependencies()) {
                     if (dependency.getGroup().equals("net.minecraft")) {
-                        AbstractModuleDependency projectDependency = (AbstractModuleDependency) dependency;
-
-                        String classifier = projectDependency.getArtifacts().stream().findFirst().get().getClassifier();
-
-                        Util.minecraft(dependency.getName(), dependency.getVersion(), classifier);
+                        Util.minecraft(dependency.getName().split("-")[0], dependency.getName().split("-")[1], dependency.getVersion());
                     }
                 }
             }

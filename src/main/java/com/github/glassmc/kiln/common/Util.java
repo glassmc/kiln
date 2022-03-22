@@ -71,7 +71,7 @@ public class Util {
         File versionFile = new File(minecraftFile, version);
         File versionJARFile = new File(versionFile, id + "-" + version + ".jar");
         File localMaven = new File(versionFile, "localMaven");
-        File versionMappedJARFile = new File(localMaven, "net/minecraft/" + id + "/" + version + "/" + id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
+        File versionMappedJARFile = new File(localMaven, "net/minecraft/" + id + "-" + version + "/" + mappingsProvider.getID() + "/" + id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
 
         if (!versionMappedJARFile.exists()) {
             try {
@@ -198,15 +198,15 @@ public class Util {
                 }
                 outputStream.close();
 
-                File versionPom = new File(versionMappedJARFile.getParentFile(), id + "-" + version + ".pom");
+                File versionPom = new File(versionMappedJARFile.getParentFile(), id + "-" + version + "-" + mappingsProvider.getID() + ".pom");
                 StringBuilder string =
                         new StringBuilder(
                                 "<project>\n" +
                                 "    <modelVersion>4.0.0</modelVersion>\n" +
                                 "\n" +
                                 "    <groupId>net.minecraft</groupId>\n" +
-                                "    <artifactId>" + id + "</artifactId>\n" +
-                                "    <version>" + version + "</version>\n" +
+                                "    <artifactId>" + id + "-" + version + "</artifactId>\n" +
+                                "    <version>" + mappingsProvider.getID() + "</version>\n" +
                                 "    <dependencies>\n");
 
                 for (String[] dependency : dependencies) {
