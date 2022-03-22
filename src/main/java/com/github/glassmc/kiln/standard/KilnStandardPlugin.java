@@ -63,8 +63,8 @@ public class KilnStandardPlugin implements Plugin<Project> {
         });
 
         if (!project.getRootProject().equals(project)) {
-            project.getRootProject().getTasks().getByName("shadowJar").dependsOn(project.getTasks().getByName("shadowJar"));
-            project.getRootProject().getTasks().getByName("build").dependsOn(project.getTasks().getByName("build"));
+            project.getRootProject().getTasks().getByName("classes").dependsOn(project.getTasks().getByName("classes"));
+            //project.getRootProject().getTasks().getByName("build").dependsOn(project.getTasks().getByName("build"));
         }
     }
 

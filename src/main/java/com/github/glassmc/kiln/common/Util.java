@@ -99,7 +99,9 @@ public class Util {
                     if (!versionLibraries.exists()) {
                         System.out.printf("Downloading %s libraries...%n", version);
                         downloadLibraries(versionManifest, versionLibraries);
+                    }
 
+                    if (!versionMappedLibraries.exists()) {
                         System.out.printf("Mapping %s libraries...%n", version);
                         mapLibraries(versionLibraries, versionMappedLibraries, version);
                     }

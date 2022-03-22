@@ -8,9 +8,6 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.PublishArtifact;
-import org.gradle.api.file.RegularFile;
-import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
 
@@ -50,17 +47,15 @@ public class KilnMainPlugin implements Plugin<Project> {
 
         this.appendProject(project, project);
 
-        project.afterEvaluate(project1 -> {
-            publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> {
-                publication.from(project.getComponents().getByName("java"));
-            });
-        });
+        project.afterEvaluate(project1 -> publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> publication.from(project.getComponents().getByName("java"))));
     }
 
     private void appendProject(Project mainProject, Project project) {
-        if (mainProject != project) {
-            mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all.jar").getAbsolutePath()));
-            mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar").getAbsolutePath()));
+        if (mainProject != project && project.getBuildFile().exists()) {
+            String displayName = project.getDisplayName();
+            mainProject.getDependencies().add("shadowRuntime", mainProject.project(displayName.substring(displayName.indexOf("'") + 1, displayName.lastIndexOf("'"))));
+            //mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all.jar").getAbsolutePath()));
+            //mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar").getAbsolutePath()));
         }
 
         for (Project subProject : project.getChildProjects().values()) {

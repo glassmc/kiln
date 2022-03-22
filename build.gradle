@@ -39,10 +39,4 @@ publishing {
             from components.java
         }
     }
-
-    repositories {
-        maven {
-            url = "file:///home/danielc/dev/glass/repository/"
-        }
-    }
 }
