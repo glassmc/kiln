@@ -9,11 +9,6 @@ import org.apache.commons.io.IOUtils;
 import org.gradle.api.*;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
-import org.gradle.api.artifacts.dsl.RepositoryHandler;
-import org.gradle.api.internal.artifacts.dependencies.AbstractDependency;
-import org.gradle.api.internal.artifacts.dependencies.AbstractModuleDependency;
-import org.gradle.api.internal.artifacts.dependencies.DefaultProjectDependency;
-import org.gradle.api.internal.artifacts.repositories.DefaultMavenArtifactRepository;
 import org.objectweb.asm.*;
 import com.github.glassmc.kiln.standard.internalremapper.ClassRemapper;
 import com.github.glassmc.kiln.standard.internalremapper.Remapper;
@@ -50,11 +45,9 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
         //this.setupShadowPlugin();
 
-        for (File file : Objects.requireNonNull(new File(this.getCache(), "minecraft").listFiles())) {
-            project.getRepositories().maven(action -> {
-                action.setUrl(new File(file, "localMaven"));
-            });
-        }
+        project.getRepositories().maven(action -> {
+            action.setUrl(new File(this.getCache(), "minecraft/localMaven"));
+        });
 
         project.afterEvaluate(p -> {
             for (Configuration configuration : project.getConfigurations()) {

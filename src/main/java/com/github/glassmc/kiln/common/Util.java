@@ -4,6 +4,9 @@ import com.github.glassmc.kiln.standard.KilnStandardPlugin;
 import com.github.glassmc.kiln.standard.mappings.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+//import org.jboss.windup.decompiler.api.DecompilationListener;
+//import org.jboss.windup.decompiler.fernflower.FernflowerDecompiler;
+//import org.jboss.windup.decompiler.util.Filter;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.objectweb.asm.ClassReader;
@@ -19,6 +22,7 @@ import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
+import java.util.zip.ZipEntry;
 
 public class Util {
 
@@ -70,7 +74,7 @@ public class Util {
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
         File versionJARFile = new File(versionFile, id + "-" + version + ".jar");
-        File localMaven = new File(versionFile, "localMaven");
+        File localMaven = new File(minecraftFile, "localMaven");
         File versionMappedJARFile = new File(localMaven, "net/minecraft/" + id + "-" + version + "/" + mappingsProvider.getID() + "/" + id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
 
         if (!versionMappedJARFile.exists()) {
@@ -198,6 +202,46 @@ public class Util {
                 }
                 outputStream.close();
 
+                /*File versionSourcesMappedFile = new File(versionMappedJARFile.getParentFile(), versionMappedJARFile.getName().replace(".jar", "-sources"));
+
+                FernflowerDecompiler fernflowerDecompiler = new FernflowerDecompiler();
+                fernflowerDecompiler.decompileArchiveImpl(versionMappedJARFile.toPath(), versionSourcesMappedFile.toPath(), entry -> Filter.Result.ACCEPT, new DecompilationListener() {
+                    @Override
+                    public void fileDecompiled(List<String> sourceClassPaths, String outputPath) {
+
+                    }
+
+                    @Override
+                    public void decompilationFailed(List<String> sourceClassPaths, String message) {
+
+                    }
+
+                    @Override
+                    public void decompilationProcessComplete() {
+
+                    }
+
+                    @Override
+                    public boolean isCancelled() {
+                        return false;
+                    }
+                });*/
+
+                //File versionSourcesMappedJARFile = new File(versionSourcesMappedFile.getParentFile(), versionSourcesMappedFile.getName() + ".jar");
+
+                /*JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(versionSourcesMappedJARFile));
+
+                Iterator<File> iterator = FileUtils.iterateFiles(versionSourcesMappedFile, null, true);
+                while (iterator.hasNext()) {
+                    File file = iterator.next();
+                    System.out.println(file.getAbsolutePath().replace(versionSourcesMappedFile.getAbsolutePath() + "/", ""));
+                    jarOutputStream.putNextEntry(new JarEntry(file.getAbsolutePath().replace(versionSourcesMappedFile.getAbsolutePath() + "/", "")));
+                    jarOutputStream.write(FileUtils.readFileToByteArray(file));
+                    jarOutputStream.closeEntry();
+                }
+
+                jarOutputStream.close();*/
+
                 File versionPom = new File(versionMappedJARFile.getParentFile(), id + "-" + version + "-" + mappingsProvider.getID() + ".pom");
                 StringBuilder string =
                         new StringBuilder(
@@ -210,7 +254,7 @@ public class Util {
                                 "    <dependencies>\n");
 
                 for (String[] dependency : dependencies) {
-                    string.append("        <dependency>\n" + "            <groupId>").append(dependency[0]).append("</groupId>\n").append("            <artifactId>").append(dependency[1]).append("</artifactId>\n").append("            <version>").append(dependency[2]).append("</version>\n").append("        </dependency>\n");
+                    string.append("        <dependency>\n" + "            <groupId>").append(dependency[0]).append("</groupId>\n").append("            <artifactId>").append(dependency[1]).append("-").append(version).append("</artifactId>\n").append("            <version>").append(dependency[2]).append("</version>\n").append("        </dependency>\n");
                 }
 
                 string.append("    </dependencies>\n" + "</project>\n");
@@ -256,7 +300,7 @@ public class Util {
 
         for (File library : Objects.requireNonNull(versionLibraries.listFiles())) {
             String[] id = libraries.get(library.getName()).split(":");
-            File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "/" + id[2] + "/" + id[1] + "-" + id[2] + ".jar");
+            File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + "/" + id[2] + "/" + id[1] + "-" + version + "-" + id[2] + ".jar");
             file.getParentFile().mkdirs();
 
             JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(file));
@@ -307,7 +351,7 @@ public class Util {
                     "    <modelVersion>4.0.0</modelVersion>\n" +
                     "\n" +
                     "    <groupId>" + id[0] + "</groupId>\n" +
-                    "    <artifactId>" + id[1] + "</artifactId>\n" +
+                    "    <artifactId>" + id[1] + "-" + version + "</artifactId>\n" +
                     "    <version>" + id[2] + "</version>\n" +
                     "</project>\n", StandardCharsets.UTF_8);
         }
