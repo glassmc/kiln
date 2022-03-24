@@ -70,7 +70,7 @@ public class Util {
         Util.setupMinecraft(id, version, pluginCache, mappingsProvider);
     }
 
-    public static File setupMinecraft(String id, String version, File pluginCache, IMappingsProvider mappingsProvider) {
+    public static void setupMinecraft(String id, String version, File pluginCache, IMappingsProvider mappingsProvider) {
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
         File versionJARFile = new File(versionFile, id + "-" + version + ".jar");
@@ -264,8 +264,6 @@ public class Util {
                 e.printStackTrace();
             }
         }
-
-        return versionMappedJARFile;
     }
 
     private static void mapLibraries(JSONObject versionManifest, File versionLibraries, File localMaven, String version) throws IOException {
