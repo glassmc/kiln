@@ -3,6 +3,7 @@ package com.github.glassmc.kiln.standard;
 import com.github.glassmc.kiln.standard.internalremapper.Remapper;
 import org.objectweb.asm.tree.ClassNode;
 
+import java.util.List;
 import java.util.Map;
 
 public abstract class CustomTransformer {
@@ -18,6 +19,6 @@ public abstract class CustomTransformer {
         this.remapper = remapper;
     }
 
-    public abstract void map(Map<String, ClassNode> classNodes);
+    public abstract void map(List<ClassNode> context, Map<String, ClassNode> classNodes);
 
 }

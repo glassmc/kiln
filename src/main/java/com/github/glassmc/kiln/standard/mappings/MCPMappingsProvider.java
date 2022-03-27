@@ -114,7 +114,9 @@ public class MCPMappingsProvider implements IMappingsProvider {
                     classReader.accept(classNode, 0);
 
                     List<String> parents = parentClasses.computeIfAbsent(classNode.name, k -> new ArrayList<>());
-                    parents.add(classNode.superName);
+                    if (!classNode.superName.equals("java/lang/Object")) {
+                        parents.add(classNode.superName);
+                    }
                     parents.addAll(classNode.interfaces);
                 }
             }

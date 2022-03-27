@@ -39,6 +39,8 @@ import org.objectweb.asm.signature.SignatureWriter;
 public abstract class Remapper {
 
     public String mapDesc(final String descriptor) {
+        if (descriptor.isEmpty()) return descriptor;
+
         return mapType(Type.getType(descriptor)).getDescriptor();
     }
 
@@ -84,6 +86,8 @@ public abstract class Remapper {
     }
 
     public String mapMethodDesc(final String methodDescriptor) {
+        if (methodDescriptor.isEmpty()) return methodDescriptor;
+
         if ("()V".equals(methodDescriptor)) {
             return methodDescriptor;
         }

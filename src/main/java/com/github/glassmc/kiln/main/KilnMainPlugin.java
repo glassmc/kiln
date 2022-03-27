@@ -8,6 +8,9 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.PublishArtifact;
+import org.gradle.api.file.RegularFile;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
 
@@ -48,6 +51,28 @@ public class KilnMainPlugin implements Plugin<Project> {
         this.appendProject(project, project);
 
         //project.afterEvaluate(project1 -> publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> publication.from(project.getComponents().getByName("java"))));
+
+        project.afterEvaluate(project1 -> {
+            PublishingExtension publishing = (PublishingExtension) project.getExtensions().findByName("publishing");
+
+            if (publishing != null) {
+                publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> {
+                    publication.from(project.getComponents().getByName("java"));
+
+                    Provider<RegularFile> file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-" + project.getVersion() + "-mapped.jar");
+                    if (file.get().getAsFile().exists()) {
+                        PublishArtifact artifact = project.getArtifacts().add("archives", file.get().getAsFile());
+                        publication.artifact(artifact);
+                    }
+
+                    file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar");
+                    if (file.get().getAsFile().exists()) {
+                        PublishArtifact artifact = project.getArtifacts().add("archives", file.get().getAsFile());
+                        publication.artifact(artifact);
+                    }
+                });
+            }
+        });
     }
 
     private void appendProject(Project mainProject, Project project) {

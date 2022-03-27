@@ -1,6 +1,8 @@
 package com.github.glassmc.kiln.standard.remapper;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import net.fabricmc.mapping.util.EntryTriple;
@@ -61,10 +63,10 @@ public class UniqueRemapper extends ReversibleRemapper {
         Map<EntryTriple, String> methodNames = new HashMap<>();
 
         Map<String, EntryTriple> fromFieldNamesReversed = new HashMap<>();
-        Map<String, EntryTriple> fromMethodNamesReversed = new HashMap<>();
+        Map<String, List<EntryTriple>> fromMethodNamesReversed = new HashMap<>();
 
         from.fieldNames.forEach((key, value) -> fromFieldNamesReversed.put(value, key));
-        from.methodNames.forEach((key, value) -> fromMethodNamesReversed.put(value, key));
+        from.methodNames.forEach((key, value) -> fromMethodNamesReversed.computeIfAbsent(value, k -> new ArrayList<>()).add(key));
 
         this.fieldNames.forEach((key, value) -> {
             EntryTriple entry = fromFieldNamesReversed.get(key);
@@ -78,14 +80,9 @@ public class UniqueRemapper extends ReversibleRemapper {
         });
 
         this.methodNames.forEach((key, value) -> {
-            EntryTriple entry = fromMethodNamesReversed.get(key);
-
-            if(entry == null) {
-                return;
+            for (EntryTriple entry : fromMethodNamesReversed.getOrDefault(key, new ArrayList<>())) {
+                methodNames.put(new EntryTriple(from.classNames.get(entry.getOwner()), key, from.mapDesc(entry.getDescriptor())), value);
             }
-
-            methodNames.put(new EntryTriple(from.classNames.get(entry.getOwner()), key, from.mapMethodDesc(entry.getDescriptor())),
-                    value);
         });
 
         return new HashRemapper(classNames, fieldNames, methodNames, new HashMap<>());

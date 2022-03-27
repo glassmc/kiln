@@ -57,9 +57,13 @@ public class HashRemapper extends ReversibleRemapper {
                                         key.getDescriptor().isEmpty() ? "" : mapDesc(key.getDescriptor())),
                                 key.getName()));
 
-        methodNames.forEach((key, value) -> reverseMethodNames.put(
-                new EntryTriple(map(key.getOwner()), value, mapMethodDesc(key.getDescriptor())),
-                key.getName()));
+        methodNames.forEach((key, value) -> {
+            if (!key.getDescriptor().isEmpty()) {
+                reverseMethodNames.put(
+                        new EntryTriple(map(key.getOwner()), value, mapMethodDesc(key.getDescriptor())),
+                        key.getName());
+            }
+        });
 
         /*variableNames.forEach((key, value) -> reverseVariableNames.computeIfAbsent(
                 new EntryTriple(map(key.getOwner()), mapMethodName(key.getOwner(), key.getName(), key.getDescriptor()), mapMethodDesc(key.getDescriptor())),

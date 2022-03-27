@@ -15,7 +15,7 @@ public class CSRGRemapper {
         Map<EntryTriple, String> methodNames = new HashMap<>();
         Map<EntryTriple, Map<Integer, String>> parameterNames = new HashMap<>();
 
-        Map<String, EntryTriple> reversedMethodNames = new HashMap<>();
+        //Map<String, EntryTriple> reversedMethodNames = new HashMap<>();
 
         int lineNumber = 1;
 
@@ -46,7 +46,7 @@ public class CSRGRemapper {
                 String dstName = columns[3];
 
                 methodNames.put(new EntryTriple(srcOwner, srcName, srcDesc), dstName);
-                reversedMethodNames.put(dstName, new EntryTriple(srcOwner, srcName, srcDesc));
+                //reversedMethodNames.put(dstName, new EntryTriple(srcOwner, srcName, srcDesc));
             } else {
                 throw new MappingParseException(columns.length + " columns unsupported", lineNumber);
             }
