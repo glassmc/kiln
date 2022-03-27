@@ -60,6 +60,9 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         Environment environment1 = extension.environment;
         vmArgsBuilder.append(String.join(File.pathSeparator, environment1.getRuntimeDependencies(KilnMainPlugin.getInstance().getCache()))).append(File.pathSeparator);
 
+        vmArgsBuilder.append(new File(getProject().getBuildDir(), "classesObf/java/main")).append(File.pathSeparator);
+        vmArgsBuilder.append(new File(getProject().getBuildDir(), "classesObf/kotlin/main")).append(File.pathSeparator);
+
         vmArgsBuilder.append("$Classpath$");
 
         vmArgsBuilder.append(" -Djava.library.path=").append(natives.getAbsolutePath());
