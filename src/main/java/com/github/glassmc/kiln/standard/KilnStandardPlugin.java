@@ -64,7 +64,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
             }
 
             p.getTasks().getByName("classes").doLast(new ReobfuscateAction2());
-            p.getTasks().getByName("build").doLast(task -> {
+            p.getTasks().getByName("jar").doLast(task -> {
                 File file = new File(p.getBuildDir(), "libs/" + p.getName() + "-" + p.getVersion() + ".jar");
                 if (!file.exists()) {
                     file = new File(p.getBuildDir(), "libs/" + p.getName() + ".jar");

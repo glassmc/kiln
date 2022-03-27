@@ -60,13 +60,13 @@ public class KilnMainPlugin implements Plugin<Project> {
                     publication.from(project.getComponents().getByName("java"));
 
                     Provider<RegularFile> file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-" + project.getVersion() + "-mapped.jar");
-                    if (file.get().getAsFile().exists()) {
+                    {
                         PublishArtifact artifact = project.getArtifacts().add("archives", file.get().getAsFile());
                         publication.artifact(artifact);
                     }
 
                     file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar");
-                    if (file.get().getAsFile().exists()) {
+                    if (project.getPlugins().hasPlugin("com.github.johnrengelman.shadow")) {
                         PublishArtifact artifact = project.getArtifacts().add("archives", file.get().getAsFile());
                         publication.artifact(artifact);
                     }
