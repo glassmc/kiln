@@ -46,7 +46,7 @@ public class KilnMainPlugin implements Plugin<Project> {
         project.getTasks().register("genRunConfiguration", GenerateRunConfiguration.class);
         project.getTasks().register("clearMappings", ClearMappings.class);
 
-        //this.setupShadow();
+        this.setupShadow();
 
         this.appendProject(project, project);
 
@@ -79,6 +79,7 @@ public class KilnMainPlugin implements Plugin<Project> {
         if (mainProject != project && project.getBuildFile().exists()) {
             String displayName = project.getDisplayName();
             mainProject.getDependencies().add("runtimeOnly", mainProject.project(displayName.substring(displayName.indexOf("'") + 1, displayName.lastIndexOf("'"))));
+            mainProject.getDependencies().add("shadowRuntime", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all-mapped.jar")));
             //mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all.jar").getAbsolutePath()));
             //mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar").getAbsolutePath()));
         }

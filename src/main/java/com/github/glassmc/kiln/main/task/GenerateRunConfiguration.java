@@ -13,9 +13,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Locale;
-import java.util.Objects;
+import java.util.*;
 
 public abstract class GenerateRunConfiguration extends DefaultTask {
 
@@ -36,6 +34,19 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
             case "eclipse":
                 generateEclipseRunConfiguration(environment, version);
         }
+    }
+
+    private List<Project> getAllProjects(Project project) {
+        List<Project> projects = new ArrayList<>();
+        if (project.getBuildDir().exists()) {
+            projects.add(project);
+        }
+
+        for (Project project1 : project.getChildProjects().values()) {
+            projects.addAll(this.getAllProjects(project1));
+        }
+
+        return projects;
     }
 
     private void generateIntelliJRunConfiguration(String environment, String version) {
@@ -60,8 +71,10 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         Environment environment1 = extension.environment;
         vmArgsBuilder.append(String.join(File.pathSeparator, environment1.getRuntimeDependencies(KilnMainPlugin.getInstance().getCache()))).append(File.pathSeparator);
 
-        vmArgsBuilder.append(new File(getProject().getBuildDir(), "classesObf/java/main")).append(File.pathSeparator);
-        vmArgsBuilder.append(new File(getProject().getBuildDir(), "classesObf/kotlin/main")).append(File.pathSeparator);
+        for (Project project : this.getAllProjects(getProject())) {
+            vmArgsBuilder.append(new File(project.getBuildDir(), "classesObf/java/main")).append(File.pathSeparator);
+            vmArgsBuilder.append(new File(project.getBuildDir(), "classesObf/kotlin/main")).append(File.pathSeparator);
+        }
 
         vmArgsBuilder.append("$Classpath$");
 
@@ -128,6 +141,11 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         KilnStandardExtension extension = (KilnStandardExtension) this.getProject().getExtensions().getByName("kiln");
         Environment environment1 = extension.environment;
         vmArgsBuilder.append(String.join(File.pathSeparator, environment1.getRuntimeDependencies(KilnMainPlugin.getInstance().getCache()))).append(File.pathSeparator);
+
+        for (Project project : this.getAllProjects(getProject())) {
+            vmArgsBuilder.append(new File(project.getBuildDir(), "classesObf/java/main")).append(File.pathSeparator);
+            vmArgsBuilder.append(new File(project.getBuildDir(), "classesObf/kotlin/main")).append(File.pathSeparator);
+        }
 
         vmArgsBuilder.append("${project_classpath}");
 

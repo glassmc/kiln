@@ -45,8 +45,9 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
         project.getPlugins().apply("java-library");
         project.getTasks().getByName("compileJava").dependsOn(project.getTasks().getByName("processResources"));
+        project.getPlugins().apply("com.github.johnrengelman.shadow");
 
-        //this.setupShadowPlugin();
+        this.setupShadowPlugin();
 
         project.getRepositories().maven(action -> {
             action.setUrl(new File(this.getCache(), "minecraft/localMaven"));
@@ -55,7 +56,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
         project.afterEvaluate(p -> {
             for (Configuration configuration : project.getConfigurations()) {
                 for (Dependency dependency : configuration.getDependencies()) {
-                    if (dependency.getGroup().equals("net.minecraft")) {
+                    if (dependency.getGroup() != null && dependency.getGroup().equals("net.minecraft")) {
                         String id = dependency.getName().split("-")[0];
                         String version = dependency.getName().split("-")[1];
                         Util.minecraft(id, version, dependency.getVersion());
@@ -148,7 +149,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
         if (!project.getRootProject().equals(project)) {
             project.getRootProject().getTasks().getByName("classes").dependsOn(project.getTasks().getByName("classes"));
-            //project.getRootProject().getTasks().getByName("build").dependsOn(project.getTasks().getByName("build"));
+            project.getRootProject().getTasks().getByName("shadowJar").dependsOn(project.getTasks().getByName("shadowJar"));
         }
     }
 
