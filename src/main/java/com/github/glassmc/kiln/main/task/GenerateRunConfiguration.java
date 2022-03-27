@@ -84,7 +84,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
         String mainClass = environment1.getMainClass();
         String module = getProject().getRootProject().getName() + ".main";
-        String programArguments = "--accessToken 0 --version " + version + " --userProperties {} --assetsDir " + new File(pluginCache, "minecraft/" + version + "/assets/");
+        String programArguments = "--accessToken 0 --version Glass-" + version + " --glassVersion " + version + " --userProperties {} --assetsDir " + new File(pluginCache, "minecraft/" + version + "/assets/");
 
         try {
             JSONObject versionManifest = Util.getVersionManifest(version);
@@ -155,7 +155,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
         String mainClass = environment1.getMainClass();
         String module = getProject().getRootProject().getName();
-        String programArguments = "--accessToken 0 --version " + version + " --userProperties {} --assetsDir " + new File(pluginCache, "minecraft/" + version + "/assets/");
+        String programArguments = "--accessToken 0 --version Glass-" + version + " --glassVersion " + version + " --userProperties {} --assetsDir " + new File(pluginCache, "minecraft/" + version + "/assets/");
 
         try {
             JSONObject versionManifest = Util.getVersionManifest(version);
