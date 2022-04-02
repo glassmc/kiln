@@ -40,4 +40,9 @@ public class GlassLoaderEnvironment implements Environment {
         return new String[] { loaderJar.getAbsolutePath() };
     }
 
+    @Override
+    public String getVersion(String version) {
+        return "Glass-" + version;
+    }
+
 }

@@ -25,4 +25,9 @@ public class CustomEnvironment implements Environment {
         return new String[0];
     }
 
+    @Override
+    public String getVersion(String version) {
+        return version;
+    }
+
 }
