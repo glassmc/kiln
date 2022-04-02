@@ -21,8 +21,8 @@ public class GlassLoaderEnvironment implements Environment {
     }
 
     @Override
-    public String[] getProgramArguments(String environment) {
-        return new String[] { "--environment", environment };
+    public String[] getProgramArguments(String environment, String version) {
+        return new String[] { "--environment", environment, "--glassVersion", version };
     }
 
     @Override

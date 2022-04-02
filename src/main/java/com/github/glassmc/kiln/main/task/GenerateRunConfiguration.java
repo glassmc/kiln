@@ -94,7 +94,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
             e.printStackTrace();
         }
 
-        programArguments += " " + String.join(" ", environment1.getProgramArguments(environment));
+        programArguments += " " + String.join(" ", environment1.getProgramArguments(environment, version));
 
         String vmArguments = vmArgsBuilder.toString();
 
@@ -165,7 +165,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
             e.printStackTrace();
         }
 
-        programArguments += " " + String.join(" ", environment1.getProgramArguments(environment));
+        programArguments += " " + String.join(" ", environment1.getProgramArguments(environment, version));
 
         String vmArguments = vmArgsBuilder.toString();
 

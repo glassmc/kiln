@@ -16,7 +16,7 @@ public class CustomEnvironment implements Environment {
     }
 
     @Override
-    public String[] getProgramArguments(String environment) {
+    public String[] getProgramArguments(String environment, String version) {
         return new String[0];
     }
 
