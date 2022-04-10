@@ -80,8 +80,6 @@ public class KilnMainPlugin implements Plugin<Project> {
             String displayName = project.getDisplayName();
             mainProject.getDependencies().add("runtimeOnly", mainProject.project(displayName.substring(displayName.indexOf("'") + 1, displayName.lastIndexOf("'"))));
             mainProject.getDependencies().add("shadowRuntime", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all-mapped.jar")));
-            //mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all.jar").getAbsolutePath()));
-            //mainProject.getDependencies().add("shadowApi", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all.jar").getAbsolutePath()));
         }
 
         for (Project subProject : project.getChildProjects().values()) {

@@ -38,9 +38,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
     private List<Project> getAllProjects(Project project) {
         List<Project> projects = new ArrayList<>();
-        if (project.getBuildDir().exists()) {
-            projects.add(project);
-        }
+        projects.add(project);
 
         for (Project project1 : project.getChildProjects().values()) {
             projects.addAll(this.getAllProjects(project1));
@@ -83,7 +81,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         String name = environment.substring(0, 1).toUpperCase(Locale.ROOT) + environment.substring(1) + " " + version;
 
         String mainClass = environment1.getMainClass();
-        String module = getProject().getRootProject().getName() + ".main";
+        String module = getProject().getRootProject().getName();
         String programArguments = "--accessToken 0 --version " + environment1.getVersion(version) + " --userProperties {} --assetsDir " + new File(pluginCache, "minecraft/" + version + "/assets/");
 
         try {
