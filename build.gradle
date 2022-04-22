@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'com.github.glassmc'
-version '0.8.7'
+version '0.8.8'
 
 sourceCompatibility = targetCompatibility = 1.8
 
@@ -27,7 +27,6 @@ dependencies {
 
     implementation 'com.github.fabricmc:tiny-mappings-parser:750be4e739'
     implementation 'org.apache.commons:commons-csv:1.9.0'
-    //implementation 'org.jboss.windup.decompiler:decompiler-fernflower:5.3.0.Alpha2'
 }
 
 publishing {

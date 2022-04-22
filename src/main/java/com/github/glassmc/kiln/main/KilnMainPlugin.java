@@ -50,8 +50,6 @@ public class KilnMainPlugin implements Plugin<Project> {
 
         this.appendProject(project, project);
 
-        //project.afterEvaluate(project1 -> publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> publication.from(project.getComponents().getByName("java"))));
-
         project.afterEvaluate(project1 -> {
             PublishingExtension publishing = (PublishingExtension) project.getExtensions().findByName("publishing");
 
