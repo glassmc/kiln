@@ -48,29 +48,7 @@ public class KilnMainPlugin implements Plugin<Project> {
 
         this.setupShadow();
 
-        this.appendProject(project, project);
-
-        project.afterEvaluate(project1 -> {
-            PublishingExtension publishing = (PublishingExtension) project.getExtensions().findByName("publishing");
-
-            if (publishing != null) {
-                publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> {
-                    publication.from(project.getComponents().getByName("java"));
-
-                    Provider<RegularFile> file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-" + project.getVersion() + "-mapped.jar");
-                    {
-                        PublishArtifact artifact = project.getArtifacts().add("archives", file.get().getAsFile());
-                        publication.artifact(artifact);
-                    }
-
-                    file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar");
-                    if (project.getPlugins().hasPlugin("com.github.johnrengelman.shadow")) {
-                        PublishArtifact artifact = project.getArtifacts().add("archives", file.get().getAsFile());
-                        publication.artifact(artifact);
-                    }
-                });
-            }
-        });
+        //project.afterEvaluate(project1 -> this.appendProject(project1, project1));
     }
 
     private void appendProject(Project mainProject, Project project) {
@@ -78,6 +56,7 @@ public class KilnMainPlugin implements Plugin<Project> {
             String displayName = project.getDisplayName();
             mainProject.getDependencies().add("runtimeOnly", mainProject.project(displayName.substring(displayName.indexOf("'") + 1, displayName.lastIndexOf("'"))));
             mainProject.getDependencies().add("shadowRuntime", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all-mapped.jar")));
+            mainProject.getDependencies().add("shadowRuntime", mainProject.files(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar")));
         }
 
         for (Project subProject : project.getChildProjects().values()) {

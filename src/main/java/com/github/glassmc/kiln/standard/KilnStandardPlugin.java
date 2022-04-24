@@ -9,6 +9,11 @@ import org.apache.commons.io.IOUtils;
 import org.gradle.api.*;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
+import org.gradle.api.artifacts.PublishArtifact;
+import org.gradle.api.file.RegularFile;
+import org.gradle.api.provider.Provider;
+import org.gradle.api.publish.PublishingExtension;
+import org.gradle.api.publish.maven.MavenPublication;
 import org.objectweb.asm.*;
 import com.github.glassmc.kiln.standard.internalremapper.ClassRemapper;
 import com.github.glassmc.kiln.standard.internalremapper.Remapper;
@@ -151,6 +156,36 @@ public class KilnStandardPlugin implements Plugin<Project> {
             project.getRootProject().getTasks().getByName("classes").dependsOn(project.getTasks().getByName("classes"));
             project.getRootProject().getTasks().getByName("shadowJar").dependsOn(project.getTasks().getByName("shadowJar"));
         }
+
+        if (project.getRootProject() != project && project.getBuildFile().exists()) {
+            String displayName = project.getDisplayName();
+            project.getRootProject().getDependencies().add("runtimeOnly", project.getRootProject().project(displayName.substring(displayName.indexOf("'") + 1, displayName.lastIndexOf("'"))));
+            project.getRootProject().getDependencies().add("shadowRuntime", project.getRootProject().files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all-mapped.jar")));
+            project.getRootProject().getDependencies().add("shadowRuntime", project.getRootProject().files(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar")));
+            System.out.println(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar").getAbsolutePath());
+        }
+
+        project.afterEvaluate(project1 -> {
+            PublishingExtension publishing = (PublishingExtension) project.getExtensions().findByName("publishing");
+
+            if (publishing != null) {
+                publishing.getPublications().create("MavenPublication", MavenPublication.class, publication -> {
+                    publication.from(project.getComponents().getByName("java"));
+
+                    Provider<RegularFile> file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-" + project.getVersion() + "-mapped.jar");
+                    {
+                        PublishArtifact artifact = project.getArtifacts().add("archives", file.get().getAsFile());
+                        publication.artifact(artifact);
+                    }
+
+                    file = project.getLayout().getBuildDirectory().file("libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar");
+                    if (project.getPlugins().hasPlugin("com.github.johnrengelman.shadow")) {
+                        PublishArtifact artifact = project.getArtifacts().add("archives", file.get().getAsFile());
+                        publication.artifact(artifact);
+                    }
+                });
+            }
+        });
     }
 
     private void setupShadowPlugin() {
