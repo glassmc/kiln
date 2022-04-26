@@ -20,12 +20,14 @@ public class MixinRemapper extends CustomTransformer {
         }
 
         for (ClassNode classNode : context) {
-            for (AnnotationNode annotationNode : classNode.invisibleAnnotations) {
-                if (annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/Mixin;")) {
-                    if (annotationNode.values != null) {
-                        List<Object> values = (List<Object>) annotationNode.values.get(annotationNode.values.indexOf("value") + 1);
-                        if (values.get(0) instanceof Type) {
-                            mixinClasses.put(classNode.name, ((Type) values.get(0)).getClassName().replace(".", "/"));
+            if (classNode.invisibleAnnotations != null) {
+                for (AnnotationNode annotationNode : classNode.invisibleAnnotations) {
+                    if (annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/Mixin;")) {
+                        if (annotationNode.values != null) {
+                            List<Object> values = (List<Object>) annotationNode.values.get(annotationNode.values.indexOf("value") + 1);
+                            if (values.get(0) instanceof Type) {
+                                mixinClasses.put(classNode.name, ((Type) values.get(0)).getClassName().replace(".", "/"));
+                            }
                         }
                     }
                 }
@@ -35,16 +37,18 @@ public class MixinRemapper extends CustomTransformer {
         for(String className : classNodes.keySet()) {
             ClassNode classNode = classNodes.get(className);
 
-            for (AnnotationNode annotationNode : classNode.invisibleAnnotations) {
-                if (annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/Mixin;")) {
-                    if (annotationNode.values != null) {
-                        List<Object> values = (List<Object>) annotationNode.values.get(annotationNode.values.indexOf("value") + 1);
-                        if (values.get(0) instanceof Type) {
-                            List<Type> oldValues = new ArrayList<>((List<Type>) (List<?>) values);
-                            values.clear();
+            if (classNode.invisibleAnnotations != null) {
+                for (AnnotationNode annotationNode : classNode.invisibleAnnotations) {
+                    if (annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/Mixin;")) {
+                        if (annotationNode.values != null) {
+                            List<Object> values = (List<Object>) annotationNode.values.get(annotationNode.values.indexOf("value") + 1);
+                            if (values.get(0) instanceof Type) {
+                                List<Type> oldValues = new ArrayList<>((List<Type>) (List<?>) values);
+                                values.clear();
 
-                            for (Type type : oldValues) {
-                                values.add(Type.getType("L" + this.getRemapper().map(type.getClassName().replace(".", "/")) + ";"));
+                                for (Type type : oldValues) {
+                                    values.add(Type.getType("L" + this.getRemapper().map(type.getClassName().replace(".", "/")) + ";"));
+                                }
                             }
                         }
                     }
@@ -63,97 +67,105 @@ public class MixinRemapper extends CustomTransformer {
 
             for(MethodNode methodNode : classNode.methods) {
                 if(this.getMixinClass(className) != null) {
-                    for(AnnotationNode annotationNode : methodNode.visibleAnnotations) {
-                        if(annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/gen/Invoker;") ||
-                                annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/gen/Accessor;") ||
-                                annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/Overwrite;") ||
-                                annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/Shadow;")) {
-                            methodNode.name = this.mapMethodName(className, methodNode.name, methodNode.desc);
-                        }
-                    }
-
-                    for(AnnotationNode annotationNode : methodNode.visibleAnnotations) {
-                        if (annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/gen/Accessor;")) {
-                            if (annotationNode.values != null) {
-                                int index = annotationNode.values.indexOf("value");
-                                String string = (String) annotationNode.values.get(index + 1);
-
-                                string = this.mapFieldName(className, string, "");
-
-                                annotationNode.values.set(index + 1, string);
-                            }
-                        } else if (annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/gen/Invoker;")) {
-                            if (annotationNode.values != null) {
-                                int index = annotationNode.values.indexOf("value");
-                                String string = (String) annotationNode.values.get(index + 1);
-                                int descIndex = string.indexOf("(");
-                                String name = string.substring(0, descIndex);
-                                String descriptor = string.substring(descIndex);
-
-                                string = this.mapMethodName(className, name, descriptor) + this.getRemapper().mapDesc(descriptor);
-
-                                annotationNode.values.set(index + 1, string);
+                    if (methodNode.visibleAnnotations != null) {
+                        for(AnnotationNode annotationNode : methodNode.visibleAnnotations) {
+                            if(annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/gen/Invoker;") ||
+                                    annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/gen/Accessor;") ||
+                                    annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/Overwrite;") ||
+                                    annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/Shadow;")) {
+                                methodNode.name = this.mapMethodName(className, methodNode.name, methodNode.desc);
                             }
                         }
                     }
 
-                    for(AnnotationNode annotationNode : methodNode.visibleAnnotations) {
-                        if(annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/injection/Inject;") ||
-                                annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/injection/Redirect;") ||
-                                annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/injection/ModifyConstant;")) {
-                            List<String> targets = (List<String>) annotationNode.values.get(annotationNode.values.indexOf("method") + 1);
-                            List<String> newTargets = new ArrayList<>();
-                            for(String string : targets) {
-                                int splitIndex = string.indexOf('(');
-                                String name = string.substring(0, splitIndex);
-                                String desc = string.substring(splitIndex);
-                                newTargets.add(this.getRemapper().mapMethodName(this.getMixinClass(className), name, desc) + this.getRemapper().mapMethodDesc(desc));
+                    if (methodNode.visibleAnnotations != null) {
+                        for(AnnotationNode annotationNode : methodNode.visibleAnnotations) {
+                            if (annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/gen/Accessor;")) {
+                                if (annotationNode.values != null) {
+                                    int index = annotationNode.values.indexOf("value");
+                                    String string = (String) annotationNode.values.get(index + 1);
+
+                                    string = this.mapFieldName(className, string, "");
+
+                                    annotationNode.values.set(index + 1, string);
+                                }
+                            } else if (annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/gen/Invoker;")) {
+                                if (annotationNode.values != null) {
+                                    int index = annotationNode.values.indexOf("value");
+                                    String string = (String) annotationNode.values.get(index + 1);
+                                    int descIndex = string.indexOf("(");
+                                    String name = string.substring(0, descIndex);
+                                    String descriptor = string.substring(descIndex);
+
+                                    string = this.mapMethodName(className, name, descriptor) + this.getRemapper().mapDesc(descriptor);
+
+                                    annotationNode.values.set(index + 1, string);
+                                }
                             }
-                            int index = annotationNode.values.indexOf(targets);
-                            annotationNode.values.remove(targets);
-                            annotationNode.values.add(index, newTargets);
                         }
+                    }
 
-                        if(annotationNode.values != null && annotationNode.values.contains("at")) {
-                            AnnotationNode atAnnotation = (AnnotationNode) annotationNode.values.get(annotationNode.values.indexOf("at") + 1);
-
-                            if (atAnnotation.values.get(0) instanceof AnnotationNode) {
-                                atAnnotation = (AnnotationNode) atAnnotation.values.get(0);
+                    if (methodNode.visibleAnnotations != null) {
+                        for(AnnotationNode annotationNode : methodNode.visibleAnnotations) {
+                            if(annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/injection/Inject;") ||
+                                    annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/injection/Redirect;") ||
+                                    annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/injection/ModifyConstant;")) {
+                                List<String> targets = (List<String>) annotationNode.values.get(annotationNode.values.indexOf("method") + 1);
+                                List<String> newTargets = new ArrayList<>();
+                                for(String string : targets) {
+                                    int splitIndex = string.indexOf('(');
+                                    String name = string.substring(0, splitIndex);
+                                    String desc = string.substring(splitIndex);
+                                    newTargets.add(this.getRemapper().mapMethodName(this.getMixinClass(className), name, desc) + this.getRemapper().mapMethodDesc(desc));
+                                }
+                                int index = annotationNode.values.indexOf(targets);
+                                annotationNode.values.remove(targets);
+                                annotationNode.values.add(index, newTargets);
                             }
 
-                            if(atAnnotation.values.contains("target")) {
-                                String target = (String) atAnnotation.values.get(atAnnotation.values.indexOf("target") + 1);
+                            if(annotationNode.values != null && annotationNode.values.contains("at")) {
+                                List<AnnotationNode> atAnnotations = (List<AnnotationNode>) annotationNode.values.get(annotationNode.values.indexOf("at") + 1);
 
-                                int index = target.indexOf(";");
-                                String[] classMethodSplit = new String[] {target.substring(0, index), target.substring(index + 1)};
-                                String className1 = classMethodSplit[0].substring(1);
-                                int methodDescIndex = classMethodSplit[1].indexOf('(');
-                                if (methodDescIndex != -1) {
-                                    String methodName = classMethodSplit[1].substring(0, methodDescIndex);
-                                    String methodDesc = classMethodSplit[1].substring(methodDescIndex);
+                                for (AnnotationNode atAnnotation : atAnnotations) {
+                                    if (atAnnotation.values.get(0) instanceof AnnotationNode) {
+                                        atAnnotation = (AnnotationNode) atAnnotation.values.get(0);
+                                    }
 
-                                    int targetIndex = atAnnotation.values.indexOf(target);
+                                    if(atAnnotation.values.contains("target")) {
+                                        String target = (String) atAnnotation.values.get(atAnnotation.values.indexOf("target") + 1);
 
-                                    atAnnotation.values.remove(target);
+                                        int index = target.indexOf(";");
+                                        String[] classMethodSplit = new String[] {target.substring(0, index), target.substring(index + 1)};
+                                        String className1 = classMethodSplit[0].substring(1);
+                                        int methodDescIndex = classMethodSplit[1].indexOf('(');
+                                        if (methodDescIndex != -1) {
+                                            String methodName = classMethodSplit[1].substring(0, methodDescIndex);
+                                            String methodDesc = classMethodSplit[1].substring(methodDescIndex);
 
-                                    atAnnotation.values.add(targetIndex, "L" + this.getRemapper().map(className1) + ";" + this.getRemapper().mapMethodName(className1, methodName, methodDesc) + this.getRemapper().mapMethodDesc(methodDesc));
-                                } else {
-                                    if (classMethodSplit[1].contains(":")) {
-                                        String[] fieldSplit = classMethodSplit[1].split(":");
+                                            int targetIndex = atAnnotation.values.indexOf(target);
 
-                                        String fieldName = fieldSplit[0];
-                                        int targetIndex = atAnnotation.values.indexOf(target);
+                                            atAnnotation.values.remove(target);
 
-                                        atAnnotation.values.remove(target);
+                                            atAnnotation.values.add(targetIndex, "L" + this.getRemapper().map(className1) + ";" + this.getRemapper().mapMethodName(className1, methodName, methodDesc) + this.getRemapper().mapMethodDesc(methodDesc));
+                                        } else {
+                                            if (classMethodSplit[1].contains(":")) {
+                                                String[] fieldSplit = classMethodSplit[1].split(":");
 
-                                        atAnnotation.values.add(targetIndex, "L" + this.getRemapper().map(className1) + ";" + this.getRemapper().mapFieldName(className1, fieldName, "") + ":" + this.getRemapper().mapDesc(fieldSplit[1]));
-                                    } else {
-                                        String fieldName = classMethodSplit[1];
-                                        int targetIndex = atAnnotation.values.indexOf(target);
+                                                String fieldName = fieldSplit[0];
+                                                int targetIndex = atAnnotation.values.indexOf(target);
 
-                                        atAnnotation.values.remove(target);
+                                                atAnnotation.values.remove(target);
 
-                                        atAnnotation.values.add(targetIndex, "L" + this.getRemapper().map(className1) + ";" + this.getRemapper().mapFieldName(className1, fieldName, ""));
+                                                atAnnotation.values.add(targetIndex, "L" + this.getRemapper().map(className1) + ";" + this.getRemapper().mapFieldName(className1, fieldName, "") + ":" + this.getRemapper().mapDesc(fieldSplit[1]));
+                                            } else {
+                                                String fieldName = classMethodSplit[1];
+                                                int targetIndex = atAnnotation.values.indexOf(target);
+
+                                                atAnnotation.values.remove(target);
+
+                                                atAnnotation.values.add(targetIndex, "L" + this.getRemapper().map(className1) + ";" + this.getRemapper().mapFieldName(className1, fieldName, ""));
+                                            }
+                                        }
                                     }
                                 }
                             }

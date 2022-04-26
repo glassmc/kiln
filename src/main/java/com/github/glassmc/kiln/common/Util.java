@@ -28,7 +28,7 @@ public class Util {
     private static JSONObject versions;
     private static final Map<String, JSONObject> versionsById = new HashMap<>();
 
-    public static void minecraft(String id, String version, String mappingsProviderId) {
+    public static void minecraft(String id, String version, String mappingsProviderId, boolean runtime) {
         KilnStandardPlugin plugin = KilnStandardPlugin.getInstance();
         File pluginCache = plugin.getCache();
 
@@ -58,7 +58,7 @@ public class Util {
             e.printStackTrace();
         }
 
-        Util.setupMinecraft(id, version, pluginCache, new ObfuscatedMappingsProvider());
+        Util.setupMinecraft(id, version, pluginCache, new ObfuscatedMappingsProvider(), runtime);
 
         try {
             mappingsProvider.setup(versionFile, version);
@@ -66,10 +66,10 @@ public class Util {
             e.printStackTrace();
         }
 
-        Util.setupMinecraft(id, version, pluginCache, mappingsProvider);
+        Util.setupMinecraft(id, version, pluginCache, mappingsProvider, runtime);
     }
 
-    public static void setupMinecraft(String id, String version, File pluginCache, IMappingsProvider mappingsProvider) {
+    public static void setupMinecraft(String id, String version, File pluginCache, IMappingsProvider mappingsProvider, boolean runtime) {
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
         File versionJARFile = new File(versionFile, id + "-" + version + ".jar");
@@ -85,7 +85,6 @@ public class Util {
 
                 if(id.equals("client")) {
                     File versionLibraries = new File(versionFile, "libraries");
-                    //File versionMappedLibraries = new File(versionFile, "mappedLibraries");
                     File versionNatives = new File(versionFile, "natives");
                     File assets = new File(versionFile, "assets");
 
@@ -100,7 +99,7 @@ public class Util {
                         downloadNatives(versionManifest, versionNatives);
                     }
 
-                    if (!assets.exists()) {
+                    if (!assets.exists() && runtime) {
                         System.out.printf("Downloading %s assets...%n", version);
                         downloadAssets(versionManifest, assets);
                     }
@@ -201,46 +200,6 @@ public class Util {
                 }
                 outputStream.close();
 
-                /*File versionSourcesMappedFile = new File(versionMappedJARFile.getParentFile(), versionMappedJARFile.getName().replace(".jar", "-sources"));
-
-                FernflowerDecompiler fernflowerDecompiler = new FernflowerDecompiler();
-                fernflowerDecompiler.decompileArchiveImpl(versionMappedJARFile.toPath(), versionSourcesMappedFile.toPath(), entry -> Filter.Result.ACCEPT, new DecompilationListener() {
-                    @Override
-                    public void fileDecompiled(List<String> sourceClassPaths, String outputPath) {
-
-                    }
-
-                    @Override
-                    public void decompilationFailed(List<String> sourceClassPaths, String message) {
-
-                    }
-
-                    @Override
-                    public void decompilationProcessComplete() {
-
-                    }
-
-                    @Override
-                    public boolean isCancelled() {
-                        return false;
-                    }
-                });*/
-
-                //File versionSourcesMappedJARFile = new File(versionSourcesMappedFile.getParentFile(), versionSourcesMappedFile.getName() + ".jar");
-
-                /*JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(versionSourcesMappedJARFile));
-
-                Iterator<File> iterator = FileUtils.iterateFiles(versionSourcesMappedFile, null, true);
-                while (iterator.hasNext()) {
-                    File file = iterator.next();
-                    System.out.println(file.getAbsolutePath().replace(versionSourcesMappedFile.getAbsolutePath() + "/", ""));
-                    jarOutputStream.putNextEntry(new JarEntry(file.getAbsolutePath().replace(versionSourcesMappedFile.getAbsolutePath() + "/", "")));
-                    jarOutputStream.write(FileUtils.readFileToByteArray(file));
-                    jarOutputStream.closeEntry();
-                }
-
-                jarOutputStream.close();*/
-
                 File versionPom = new File(versionMappedJARFile.getParentFile(), id + "-" + version + "-" + mappingsProvider.getID() + ".pom");
                 StringBuilder string =
                         new StringBuilder(
@@ -259,6 +218,18 @@ public class Util {
                 string.append("    </dependencies>\n" + "</project>\n");
 
                 FileUtils.writeStringToFile(versionPom, string.toString(), StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else if (runtime) {
+            try {
+                File assets = new File(versionFile, "assets");
+
+                if (!assets.exists()) {
+                    JSONObject versionManifest = getVersionManifest(version);
+                    System.out.printf("Downloading %s assets...%n", version);
+                    downloadAssets(versionManifest, assets);
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -54,7 +54,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         }
 
         File pluginCache = KilnMainPlugin.getInstance().getCache();
-        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider());
+        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider(), true);
         File versionFile = new File(pluginCache, "minecraft/" + version);
         File dependencies = new File(versionFile, "libraries");
         File natives = new File(versionFile, "natives");
@@ -125,7 +125,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
     private void generateEclipseRunConfiguration(String environment, String version) {
         File pluginCache = KilnMainPlugin.getInstance().getCache();
-        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider());
+        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider(), true);
         File versionFile = new File(pluginCache, "minecraft/" + version);
         File dependencies = new File(versionFile, "libraries");
         File natives = new File(versionFile, "natives");
