@@ -61,10 +61,13 @@ public class KilnStandardPlugin implements Plugin<Project> {
         project.afterEvaluate(p -> {
             for (Configuration configuration : project.getConfigurations()) {
                 for (Dependency dependency : configuration.getDependencies()) {
-                    if (dependency.getGroup() != null && dependency.getGroup().equals("net.minecraft")) {
-                        String id = dependency.getName().split("-")[0];
-                        String version = dependency.getName().split("-")[1];
-                        Util.minecraft(id, version, dependency.getVersion(), false);
+                    if (dependency.getGroup() != null && dependency.getGroup().equals("net.minecraft") &&
+                            (dependency.getName().startsWith("client-") || dependency.getName().startsWith("server-")) &&
+                            dependency.getVersion() != null) {
+                        int splitPoint = dependency.getName().indexOf("-");
+                        String environment = dependency.getName().substring(0, splitPoint);
+                        String version = dependency.getName().substring(splitPoint + 1);
+                        Util.minecraft(environment, version, dependency.getVersion(), false);
                     }
                 }
             }

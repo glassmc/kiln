@@ -69,12 +69,12 @@ public class Util {
         Util.setupMinecraft(id, version, pluginCache, mappingsProvider, runtime);
     }
 
-    public static void setupMinecraft(String id, String version, File pluginCache, IMappingsProvider mappingsProvider, boolean runtime) {
+    public static void setupMinecraft(String environment, String version, File pluginCache, IMappingsProvider mappingsProvider, boolean runtime) {
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
-        File versionJARFile = new File(versionFile, id + "-" + version + ".jar");
+        File versionJARFile = new File(versionFile, environment + "-" + version + ".jar");
         File localMaven = new File(minecraftFile, "localMaven");
-        File versionMappedJARFile = new File(localMaven, "net/minecraft/" + id + "-" + version + "/" + mappingsProvider.getID() + "/" + id + "-" + version + "-" + mappingsProvider.getID() + ".jar");
+        File versionMappedJARFile = new File(localMaven, "net/minecraft/" + environment + "-" + version + "/" + mappingsProvider.getID() + "/" + environment + "-" + version + "-" + mappingsProvider.getID() + ".jar");
 
         if (!versionMappedJARFile.exists()) {
             try {
@@ -83,7 +83,7 @@ public class Util {
                 List<String> prefixClasses = new ArrayList<>();
                 List<String[]> dependencies = new ArrayList<>();
 
-                if(id.equals("client")) {
+                if(environment.equals("client")) {
                     File versionLibraries = new File(versionFile, "libraries");
                     File versionNatives = new File(versionFile, "natives");
                     File assets = new File(versionFile, "assets");
@@ -136,7 +136,7 @@ public class Util {
 
                 if (!versionJARFile.exists()) {
                     System.out.printf("Downloading %s jar...%n", version);
-                    URL versionJarURL = new URL(versionManifest.getJSONObject("downloads").getJSONObject(id).getString("url"));
+                    URL versionJarURL = new URL(versionManifest.getJSONObject("downloads").getJSONObject(environment).getString("url"));
                     FileUtils.copyURLToFile(versionJarURL, versionJARFile);
                 }
 
@@ -200,14 +200,14 @@ public class Util {
                 }
                 outputStream.close();
 
-                File versionPom = new File(versionMappedJARFile.getParentFile(), id + "-" + version + "-" + mappingsProvider.getID() + ".pom");
+                File versionPom = new File(versionMappedJARFile.getParentFile(), environment + "-" + version + "-" + mappingsProvider.getID() + ".pom");
                 StringBuilder string =
                         new StringBuilder(
                                 "<project>\n" +
                                 "    <modelVersion>4.0.0</modelVersion>\n" +
                                 "\n" +
                                 "    <groupId>net.minecraft</groupId>\n" +
-                                "    <artifactId>" + id + "-" + version + "</artifactId>\n" +
+                                "    <artifactId>" + environment + "-" + version + "</artifactId>\n" +
                                 "    <version>" + mappingsProvider.getID() + "</version>\n" +
                                 "    <dependencies>\n");
 
