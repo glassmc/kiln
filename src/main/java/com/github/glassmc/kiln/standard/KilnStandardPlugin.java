@@ -37,7 +37,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
     protected Project project;
     private KilnStandardExtension extension;
 
-    private final List<IMappingsProvider> mappingsProviders = new ArrayList<>();
+    private final List<Pair<IMappingsProvider, Boolean>> mappingsProviders = new ArrayList<>();
 
     @Override
     public void apply(Project project) {
@@ -67,7 +67,9 @@ public class KilnStandardPlugin implements Plugin<Project> {
                         int splitPoint = dependency.getName().indexOf("-");
                         String environment = dependency.getName().substring(0, splitPoint);
                         String version = dependency.getName().substring(splitPoint + 1);
-                        Util.minecraft(environment, version, dependency.getVersion(), false);
+                        String[] versionSplit = dependency.getVersion().split("-");
+
+                        Util.minecraft(environment, version, versionSplit[0], versionSplit[1].equals("prefix"), false);
                     }
                 }
             }
@@ -210,15 +212,15 @@ public class KilnStandardPlugin implements Plugin<Project> {
         return project;
     }
 
-    public void addMappingsProvider(IMappingsProvider mappingsProvider) {
-        this.mappingsProviders.add(mappingsProvider);
+    public void addMappingsProvider(IMappingsProvider mappingsProvider, boolean prefix) {
+        this.mappingsProviders.add(new Pair<>(mappingsProvider, prefix));
     }
 
-    public List<IMappingsProvider> getMappingsProviders() {
+    public List<Pair<IMappingsProvider, Boolean>> getMappingsProviders() {
         return mappingsProviders;
     }
 
-    private void addAllMappingsProviders(Project project, List<IMappingsProvider> mappingsProviders) {
+    private void addAllMappingsProviders(Project project, List<Pair<IMappingsProvider, Boolean>> mappingsProviders) {
         KilnStandardPlugin plugin = project.getPlugins().findPlugin(KilnStandardPlugin.class);
         if (plugin != null) {
             mappingsProviders.addAll(plugin.getMappingsProviders());
@@ -262,7 +264,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
         public void execute(Task task) {
             long startTime = System.currentTimeMillis();
 
-            List<IMappingsProvider> mappingsProviders = new ArrayList<>();
+            List<Pair<IMappingsProvider, Boolean>> mappingsProviders = new ArrayList<>();
             addAllMappingsProviders(project, mappingsProviders);
 
             Map<String, ClassNode> classNodes = new HashMap<>();
@@ -299,8 +301,8 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 }
             }
 
-            List<Map.Entry<IMappingsProvider, Remapper>> remappers = mappingsProviders.stream()
-                    .map(provider -> new AbstractMap.SimpleEntry<>(provider, provider.getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED)))
+            List<Pair<IMappingsProvider, Pair<Boolean, Remapper>>> remappers = mappingsProviders.stream()
+                    .map(provider -> new Pair<>(provider.getLeft(), new Pair<>(provider.getRight(), provider.getLeft().getRemapper(IMappingsProvider.Direction.TO_OBFUSCATED))))
                     .collect(Collectors.toList());
 
             System.out.println("Finished setup in " + (System.currentTimeMillis() - startTime) + " milliseconds.");
@@ -334,11 +336,13 @@ public class KilnStandardPlugin implements Plugin<Project> {
                             newName = name.substring(name.indexOf("/") + 1);
                             nameVersion = name.substring(1, name.indexOf("/")).replace("_", ".");
                         } else {
-                            return name;
+                            newName = name;
+                            nameVersion = null;
+                            //return name;
                         }
-                        for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
-                            if (remapper.getKey().getVersion().equals(nameVersion)) {
-                                newName = remapper.getValue().map(newName);
+                        for (Pair<IMappingsProvider, Pair<Boolean, Remapper>> remapper : remappers) {
+                            if (!remapper.getRight().getLeft() || remapper.getLeft().getVersion().equals(nameVersion)) {
+                                newName = remapper.getRight().getRight().map(newName);
                             }
                         }
                         cache.put(name, newName);
@@ -373,9 +377,9 @@ public class KilnStandardPlugin implements Plugin<Project> {
                         boolean done = false;
 
                         for (String classString : parents) {
-                            for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
-                                if (remapper.getKey().getVersion().equals(nameVersion)) {
-                                    newName = remapper.getValue().mapFieldName(classString, newName, descriptor);
+                            for (Pair<IMappingsProvider, Pair<Boolean, Remapper>> remapper : remappers) {
+                                if (!remapper.getRight().getLeft() || remapper.getLeft().getVersion().equals(nameVersion)) {
+                                    newName = remapper.getRight().getRight().mapFieldName(classString, newName, descriptor);
                                     done = true;
                                 }
 
@@ -420,11 +424,9 @@ public class KilnStandardPlugin implements Plugin<Project> {
                         boolean done = false;
 
                         for (String classString : parents) {
-                            for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
-                                if (remapper.getKey().getVersion().equals(nameVersion)) {
-                                    //long time = System.currentTimeMillis();
-                                    newName = remapper.getValue().mapMethodName(classString, newName, versionRemover.mapDesc(descriptor));
-                                    //System.out.println(System.currentTimeMillis() - time);
+                            for (Pair<IMappingsProvider, Pair<Boolean, Remapper>> remapper : remappers) {
+                                if (!remapper.getRight().getLeft() || remapper.getLeft().getVersion().equals(nameVersion)) {
+                                    newName = remapper.getRight().getRight().mapMethodName(classString, newName, versionRemover.mapDesc(descriptor));
                                     done = true;
                                 }
 
@@ -457,9 +459,9 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     }
 
                     String newName = name;
-                    for (Map.Entry<IMappingsProvider, Remapper> remapper : remappers) {
-                        if (remapper.getKey().getVersion().equals(nameVersion)) {
-                            newName = remapper.getValue().mapVariableName(newOwner, methodOwner, methodDesc, newName, index);
+                    for (Pair<IMappingsProvider, Pair<Boolean, Remapper>> remapper : remappers) {
+                        if (!remapper.getRight().getLeft() || remapper.getLeft().getVersion().equals(nameVersion)) {
+                            newName = remapper.getRight().getRight().mapVariableName(newOwner, methodOwner, methodDesc, newName, index);
                         }
                     }
                     return newName;

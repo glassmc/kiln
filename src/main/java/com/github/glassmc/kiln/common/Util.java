@@ -28,7 +28,7 @@ public class Util {
     private static JSONObject versions;
     private static final Map<String, JSONObject> versionsById = new HashMap<>();
 
-    public static void minecraft(String id, String version, String mappingsProviderId, boolean runtime) {
+    public static void minecraft(String id, String version, String mappingsProviderId, boolean prefix, boolean runtime) {
         KilnStandardPlugin plugin = KilnStandardPlugin.getInstance();
         File pluginCache = plugin.getCache();
 
@@ -47,7 +47,7 @@ public class Util {
             default:
                 mappingsProvider = new ObfuscatedMappingsProvider();
         }
-        plugin.addMappingsProvider(mappingsProvider);
+        plugin.addMappingsProvider(mappingsProvider, prefix);
 
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
@@ -58,7 +58,7 @@ public class Util {
             e.printStackTrace();
         }
 
-        Util.setupMinecraft(id, version, pluginCache, new ObfuscatedMappingsProvider(), runtime);
+        Util.setupMinecraft(id, version, pluginCache, new ObfuscatedMappingsProvider(), prefix, runtime);
 
         try {
             mappingsProvider.setup(versionFile, version);
@@ -66,15 +66,15 @@ public class Util {
             e.printStackTrace();
         }
 
-        Util.setupMinecraft(id, version, pluginCache, mappingsProvider, runtime);
+        Util.setupMinecraft(id, version, pluginCache, mappingsProvider, prefix, runtime);
     }
 
-    public static void setupMinecraft(String environment, String version, File pluginCache, IMappingsProvider mappingsProvider, boolean runtime) {
+    public static void setupMinecraft(String environment, String version, File pluginCache, IMappingsProvider mappingsProvider, boolean prefix, boolean runtime) {
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
         File versionJARFile = new File(versionFile, environment + "-" + version + ".jar");
         File localMaven = new File(minecraftFile, "localMaven");
-        File versionMappedJARFile = new File(localMaven, "net/minecraft/" + environment + "-" + version + "/" + mappingsProvider.getID() + "/" + environment + "-" + version + "-" + mappingsProvider.getID() + ".jar");
+        File versionMappedJARFile = new File(localMaven, "net/minecraft/" + environment + "-" + version + "/" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + "/" + environment + "-" + version + "-" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + ".jar");
 
         if (!versionMappedJARFile.exists()) {
             try {
@@ -91,7 +91,13 @@ public class Util {
                     if (!versionLibraries.exists()) {
                         System.out.printf("Downloading %s libraries...%n", version);
                         downloadLibraries(versionManifest, versionLibraries);
-                        mapLibraries(versionManifest, versionLibraries, localMaven, version);
+                    }
+
+                    File file = new File(versionLibraries, prefix + ".cache");
+                    if (!file.exists()) {
+                        System.out.printf("Mapping %s libraries...%n", version);
+                        mapLibraries(versionManifest, versionLibraries, localMaven, version, prefix);
+                        FileUtils.writeStringToFile(file, "", StandardCharsets.UTF_8);
                     }
 
                     if (!versionNatives.exists()) {
@@ -120,6 +126,8 @@ public class Util {
                     }
 
                     for (File mappedLibrary : versionLibraries.listFiles()) {
+                        if (!mappedLibrary.getName().endsWith(".jar")) continue;
+
                         JarFile jarFile = new JarFile(mappedLibrary);
                         Enumeration<JarEntry> entries = jarFile.entries();
 
@@ -152,7 +160,11 @@ public class Util {
                     public String map(String name) {
                         String mapped = remapper.map(name);
                         if ((input.getJarEntry(name + ".class") != null || prefixClasses.contains(mapped)) && mappingsProvider.getVersion() != null) {
-                            return "v" + version.replace(".", "_") + "/" + mapped;
+                            if (prefix) {
+                                return "v" + version.replace(".", "_") + "/" + mapped;
+                            } else {
+                                return mapped;
+                            }
                         } else {
                             return name;
                         }
@@ -200,7 +212,7 @@ public class Util {
                 }
                 outputStream.close();
 
-                File versionPom = new File(versionMappedJARFile.getParentFile(), environment + "-" + version + "-" + mappingsProvider.getID() + ".pom");
+                File versionPom = new File(versionMappedJARFile.getParentFile(), environment + "-" + version + "-" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + ".pom");
                 StringBuilder string =
                         new StringBuilder(
                                 "<project>\n" +
@@ -208,11 +220,11 @@ public class Util {
                                 "\n" +
                                 "    <groupId>net.minecraft</groupId>\n" +
                                 "    <artifactId>" + environment + "-" + version + "</artifactId>\n" +
-                                "    <version>" + mappingsProvider.getID() + "</version>\n" +
+                                "    <version>" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + "</version>\n" +
                                 "    <dependencies>\n");
 
                 for (String[] dependency : dependencies) {
-                    string.append("        <dependency>\n" + "            <groupId>").append(dependency[0]).append("</groupId>\n").append("            <artifactId>").append(dependency[1]).append("-").append(version).append("</artifactId>\n").append("            <version>").append(dependency[2]).append("</version>\n").append("        </dependency>\n");
+                    string.append("        <dependency>\n" + "            <groupId>").append(dependency[0]).append("</groupId>\n").append("            <artifactId>").append(dependency[1]).append("-").append(version).append("-").append(prefix ? "prefix" : "noprefix").append("</artifactId>\n").append("            <version>").append(dependency[2]).append("</version>\n").append("        </dependency>\n");
                 }
 
                 string.append("    </dependencies>\n" + "</project>\n");
@@ -236,7 +248,7 @@ public class Util {
         }
     }
 
-    private static void mapLibraries(JSONObject versionManifest, File versionLibraries, File localMaven, String version) throws IOException {
+    private static void mapLibraries(JSONObject versionManifest, File versionLibraries, File localMaven, String version, boolean prefix) throws IOException {
         List<String> names = new ArrayList<>();
 
         for (File library : Objects.requireNonNull(versionLibraries.listFiles())) {
@@ -268,7 +280,7 @@ public class Util {
 
         for (File library : Objects.requireNonNull(versionLibraries.listFiles())) {
             String[] id = libraries.get(library.getName()).split(":");
-            File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + "/" + id[2] + "/" + id[1] + "-" + version + "-" + id[2] + ".jar");
+            File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "/" + id[2] + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "-" + id[2] + ".jar");
             file.getParentFile().mkdirs();
 
             JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(file));
@@ -280,7 +292,7 @@ public class Util {
 
                 @Override
                 public String map(String name) {
-                    if (names.contains(name)) {
+                    if (names.contains(name) && prefix) {
                         return "v" + version.replace(".", "_") + "/" + name;
                     }
                     return name;
@@ -319,7 +331,7 @@ public class Util {
                     "    <modelVersion>4.0.0</modelVersion>\n" +
                     "\n" +
                     "    <groupId>" + id[0] + "</groupId>\n" +
-                    "    <artifactId>" + id[1] + "-" + version + "</artifactId>\n" +
+                    "    <artifactId>" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "</artifactId>\n" +
                     "    <version>" + id[2] + "</version>\n" +
                     "</project>\n", StandardCharsets.UTF_8);
         }

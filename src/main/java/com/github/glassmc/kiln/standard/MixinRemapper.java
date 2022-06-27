@@ -114,6 +114,7 @@ public class MixinRemapper extends CustomTransformer {
                                 List<String> newTargets = new ArrayList<>();
                                 for(String string : targets) {
                                     int splitIndex = string.indexOf('(');
+                                    System.out.println(string);
                                     String name = string.substring(0, splitIndex);
                                     String desc = string.substring(splitIndex);
                                     newTargets.add(this.getRemapper().mapMethodName(this.getMixinClass(className), name, desc) + this.getRemapper().mapMethodDesc(desc));

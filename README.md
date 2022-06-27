@@ -12,8 +12,6 @@ Gradle plugin to aid in the development of shards.
    - [ ] Sand Mappings? (Custom GlassMC Mappings)
  - [x] Depending On Shards
    - [x] Shard Dependencies
- - [ ] Publish Task (Creating a PR in [registry](https://github.com/glassmc/registry))
-   - [ ] Correctly Collecting Dependencies
 
 ## Testing
 The current best way to test kiln is to run the **publishToMavenLocal** gradle plugin.

@@ -54,7 +54,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         }
 
         File pluginCache = KilnMainPlugin.getInstance().getCache();
-        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider(), true);
+        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider(), false, true);
         File versionFile = new File(pluginCache, "minecraft/" + version);
         File dependencies = new File(versionFile, "libraries");
         File natives = new File(versionFile, "natives");
@@ -67,6 +67,10 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
         KilnStandardExtension extension = (KilnStandardExtension) this.getProject().getExtensions().getByName("kiln");
         Environment environment1 = extension.environment;
+        if (environment1 == null) {
+            throw new RuntimeException("Environment not set via kiln extension.");
+        }
+
         vmArgsBuilder.append(String.join(File.pathSeparator, environment1.getRuntimeDependencies(KilnMainPlugin.getInstance().getCache()))).append(File.pathSeparator);
 
         for (Project project : this.getAllProjects(getProject())) {
@@ -125,7 +129,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
     private void generateEclipseRunConfiguration(String environment, String version) {
         File pluginCache = KilnMainPlugin.getInstance().getCache();
-        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider(), true);
+        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider(), false, true);
         File versionFile = new File(pluginCache, "minecraft/" + version);
         File dependencies = new File(versionFile, "libraries");
         File natives = new File(versionFile, "natives");
