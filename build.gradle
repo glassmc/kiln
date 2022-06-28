@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'com.github.glassmc'
-version '0.8.11'
+version '0.8.12'
 
 sourceCompatibility = targetCompatibility = 1.8
 
@@ -20,8 +20,8 @@ dependencies {
 
     implementation 'commons-io:commons-io:2.11.0'
     implementation 'org.json:json:20220320'
-    implementation 'org.ow2.asm:asm-tree:9.2'
-    implementation 'org.ow2.asm:asm-commons:9.2'
+    implementation 'org.ow2.asm:asm-tree:9.3'
+    implementation 'org.ow2.asm:asm-commons:9.3'
     implementation 'com.github.jezza:toml:1.2-java-8'
     implementation 'com.github.johnrengelman:shadow:7.1.2'
 

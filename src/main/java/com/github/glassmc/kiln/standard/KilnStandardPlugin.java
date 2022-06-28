@@ -14,6 +14,7 @@ import org.gradle.api.file.RegularFile;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
+import org.gradle.api.tasks.TaskDependency;
 import org.objectweb.asm.*;
 import com.github.glassmc.kiln.standard.internalremapper.ClassRemapper;
 import com.github.glassmc.kiln.standard.internalremapper.Remapper;
@@ -67,9 +68,17 @@ public class KilnStandardPlugin implements Plugin<Project> {
                         int splitPoint = dependency.getName().indexOf("-");
                         String environment = dependency.getName().substring(0, splitPoint);
                         String version = dependency.getName().substring(splitPoint + 1);
-                        String[] versionSplit = dependency.getVersion().split("-");
 
-                        Util.minecraft(environment, version, versionSplit[0], versionSplit[1].equals("prefix"), false);
+                        String mappings = dependency.getVersion();
+                        boolean prefix = true;
+                        if (dependency.getVersion().contains("-")) {
+                            String[] versionSplit = dependency.getVersion().split("-");
+                            mappings = versionSplit[0];
+                            prefix = versionSplit[1].equals("prefix");
+                        }
+
+
+                        Util.minecraft(environment, version, mappings, prefix, false);
                     }
                 }
             }
@@ -153,6 +162,11 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
         if (!project.getRootProject().equals(project)) {
             project.getRootProject().getTasks().getByName("classes").dependsOn(project.getTasks().getByName("classes"));
+
+            // why this fixes a bug? who knows
+            TaskDependency taskDependency = project.getTasks().getByName("compileJava").getTaskDependencies();
+            taskDependency.getDependencies(project.getTasks().getByName("compileJava"));
+
             project.getRootProject().getTasks().getByName("shadowJar").dependsOn(project.getTasks().getByName("shadowJar"));
         }
 
