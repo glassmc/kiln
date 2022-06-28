@@ -300,10 +300,10 @@ public class KilnStandardPlugin implements Plugin<Project> {
                     String language = file.getAbsolutePath();
                     language = language.substring(language.indexOf("classes" + File.separator) + 8);
                     language = language.substring(0, language.indexOf(File.separator));
-                    String className = file.getAbsolutePath().replace(new File(classes, language + File.separator + "main").getAbsolutePath() + File.separator, "").replace(".class", "");
+                    String className = file.getAbsolutePath().replace(new File(classes, language + File.separator + "main").getAbsolutePath() + File.separator, "").replace(".class", "").replace("\\", "/");
                     classNodes.put(className, classNode);
 
-                    if (cachedClasses.get(className) == null || !Arrays.equals(data, cachedClasses.get(className)) || !new File(file.getAbsolutePath().replace("/classes/", "/classesObf/")).exists()) {
+                    if (cachedClasses.get(className) == null || !Arrays.equals(data, cachedClasses.get(className)) || !new File(file.getAbsolutePath().replace("\\", "/").replace("/classes/", "/classesObf/")).exists()) {
                         cachedClasses.put(className, data);
                         classNodesModified.put(className, classNode);
                     }
@@ -352,7 +352,6 @@ public class KilnStandardPlugin implements Plugin<Project> {
                         } else {
                             newName = name;
                             nameVersion = null;
-                            //return name;
                         }
                         for (Pair<IMappingsProvider, Pair<Boolean, Remapper>> remapper : remappers) {
                             if (!remapper.getRight().getLeft() || remapper.getLeft().getVersion().equals(nameVersion)) {
@@ -603,7 +602,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 ClassVisitor visitor = new ClassRemapper(writer, realRemapper);
                 classNode.accept(visitor);
                 try {
-                    File file2 = new File(file.getAbsolutePath().replace("/classes/", "/classesObf/"));
+                    File file2 = new File(file.getAbsolutePath().replace("\\", "/").replace("/classes/", "/classesObf/"));
                     file2.getParentFile().mkdirs();
                     OutputStream outputStream = new FileOutputStream(file2);
                     outputStream.write(writer.toByteArray());
