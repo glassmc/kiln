@@ -563,9 +563,16 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 classesMap.put(classNode.name, parents);
             }
 
+            Map<String, Pair<Map<String, String>, List<String>>> context = new HashMap<>();
+            for (Pair<IMappingsProvider, Boolean> mappingsProvider : mappingsProviders) {
+                context.putAll(mappingsProvider.getLeft().getContext(IMappingsProvider.Side.NAMED, mappingsProvider.getRight()));
+            }
+
             for(Pair<Project, CustomTransformer> customTransformer : transformers) {
                 long remapTime = System.currentTimeMillis();
                 customTransformer.getRight().setRemapper(collectiveRemapper);
+
+                customTransformer.getRight().setContext(context);
 
                 customTransformer.getRight().map(new ArrayList<>(classNodes.values()), new HashMap<>(classNodesModified));
                 System.out.println(customTransformer.getRight() + " done in " + (System.currentTimeMillis() - remapTime) + " milliseconds.");

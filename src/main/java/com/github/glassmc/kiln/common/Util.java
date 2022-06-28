@@ -252,6 +252,8 @@ public class Util {
         List<String> names = new ArrayList<>();
 
         for (File library : Objects.requireNonNull(versionLibraries.listFiles())) {
+            if (!library.getName().endsWith(".jar")) continue;
+
             JarFile jarFile = new JarFile(library);
             Enumeration<JarEntry> entries = jarFile.entries();
 
@@ -279,6 +281,8 @@ public class Util {
         }
 
         for (File library : Objects.requireNonNull(versionLibraries.listFiles())) {
+            if (!library.getName().endsWith(".jar")) continue;
+
             String[] id = libraries.get(library.getName()).split(":");
             File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "/" + id[2] + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "-" + id[2] + ".jar");
             file.getParentFile().mkdirs();

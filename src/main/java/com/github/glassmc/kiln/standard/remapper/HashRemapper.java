@@ -86,4 +86,12 @@ public class HashRemapper extends ReversibleRemapper {
         return new UniqueRemapper(methodNames, fieldNames, methodNames, new HashMap<>());
     }
 
+    public Map<String, String> getClassNames() {
+        return classNames;
+    }
+
+    public Map<EntryTriple, String> getMethodNames() {
+        return methodNames;
+    }
+
 }

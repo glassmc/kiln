@@ -1,8 +1,11 @@
 package com.github.glassmc.kiln.standard.mappings;
 
+import com.github.glassmc.kiln.common.Pair;
 import com.github.glassmc.kiln.standard.internalremapper.Remapper;
 
 import java.io.File;
+import java.util.List;
+import java.util.Map;
 
 public class ObfuscatedMappingsProvider implements IMappingsProvider {
 
@@ -14,6 +17,11 @@ public class ObfuscatedMappingsProvider implements IMappingsProvider {
     @Override
     public Remapper getRemapper(Direction direction) {
         return new Remapper() { };
+    }
+
+    @Override
+    public Map<String, Pair<Map<String, String>, List<String>>> getContext(Side side, boolean prefix) {
+        return null;
     }
 
     @Override

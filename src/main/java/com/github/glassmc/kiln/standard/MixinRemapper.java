@@ -113,10 +113,16 @@ public class MixinRemapper extends CustomTransformer {
                                 List<String> targets = (List<String>) annotationNode.values.get(annotationNode.values.indexOf("method") + 1);
                                 List<String> newTargets = new ArrayList<>();
                                 for(String string : targets) {
-                                    int splitIndex = string.indexOf('(');
-                                    System.out.println(string);
-                                    String name = string.substring(0, splitIndex);
-                                    String desc = string.substring(splitIndex);
+                                    String name;
+                                    String desc;
+                                    if (string.contains("(")) {
+                                        int splitIndex = string.indexOf('(');
+                                        name = string.substring(0, splitIndex);
+                                        desc = string.substring(splitIndex);
+                                    } else {
+                                        name = string;
+                                        desc = this.getContext().get(this.getMixinClass(className)).getLeft().get(name);
+                                    }
                                     newTargets.add(this.getRemapper().mapMethodName(this.getMixinClass(className), name, desc) + this.getRemapper().mapMethodDesc(desc));
                                 }
                                 int index = annotationNode.values.indexOf(targets);

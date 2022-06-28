@@ -12,6 +12,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import com.github.glassmc.kiln.common.Pair;
+import net.fabricmc.mapping.util.EntryTriple;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONObject;
 import com.github.glassmc.kiln.standard.internalremapper.Remapper;
@@ -179,6 +180,41 @@ public class MCPMappingsProvider implements IMappingsProvider {
             }
 
         };
+    }
+
+    @Override
+    public Map<String, Pair<Map<String, String>, List<String>>> getContext(Side side, boolean prefix) {
+        if (side == Side.NAMED) {
+            Remapper remapper = this.getRemapper(Direction.TO_NAMED);
+
+            Map<String, Pair<Map<String, String>, List<String>>> context = new HashMap<>();
+
+            Remapper versionAdder = new Remapper() {
+                @Override
+                public String map(String name) {
+                    if (prefix) {
+                        return "v" + version.replace(".", "_") + "/" + name;
+                    }
+                    return name;
+                }
+            };
+
+            for (Map.Entry<String, String> className : searge.getClassNames().entrySet()) {
+                String className1 = versionAdder.map(className.getValue());
+
+                context.put(className1, new Pair<>(new HashMap<>(), new ArrayList<>()));
+            }
+
+            for (Map.Entry<EntryTriple, String> methodName : searge.getMethodNames().entrySet()) {
+                String className = versionAdder.map(remapper.map(methodName.getKey().getOwner()));
+                String methodName1 = named.mapMethodName(className, methodName.getValue(), null);
+                String methodDesc = versionAdder.mapDesc(remapper.mapMethodDesc(methodName.getKey().getDescriptor()));
+                context.get(className).getLeft().put(methodName1, methodDesc);
+            }
+
+            return context;
+        }
+        return null;
     }
 
     private List<String> getClasses(String obfName, Direction direction, ReversibleRemapper initial, ReversibleRemapper result) {

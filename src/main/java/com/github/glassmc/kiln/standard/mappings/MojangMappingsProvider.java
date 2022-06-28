@@ -124,6 +124,11 @@ public class MojangMappingsProvider implements IMappingsProvider {
         };
     }
 
+    @Override
+    public Map<String, Pair<Map<String, String>, List<String>>> getContext(Side side, boolean prefix) {
+        return null;
+    }
+
     private List<String> getClasses(String obfName, Direction direction, Remapper reverseRemapper) {
         List<String> parents = new ArrayList<>();
 

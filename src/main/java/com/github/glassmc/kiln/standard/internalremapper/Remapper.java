@@ -206,4 +206,5 @@ public abstract class Remapper {
     public String mapVariableName(String clazz, String method, String methodDesc, String name, int index) {
         return name;
     }
+
 }
