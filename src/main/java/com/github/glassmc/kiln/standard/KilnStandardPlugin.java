@@ -24,6 +24,7 @@ import org.objectweb.asm.tree.ClassNode;
 import java.io.*;
 import java.util.*;
 import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
 import java.util.stream.Collectors;
@@ -174,8 +175,22 @@ public class KilnStandardPlugin implements Plugin<Project> {
         if (project.getRootProject() != project && project.getBuildFile().exists()) {
             String displayName = project.getDisplayName();
             project.getRootProject().getDependencies().add("runtimeOnly", project.getRootProject().project(displayName.substring(displayName.indexOf("'") + 1, displayName.lastIndexOf("'"))));
-            //project.getRootProject().getDependencies().add("shadowRuntime", project.getRootProject().files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all-mapped.jar")));
-            //project.getRootProject().getDependencies().add("shadowRuntime", project.getRootProject().files(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar")));
+            File file;
+            if (!((String) project.getVersion()).isEmpty()) {
+                file = new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar");
+            } else {
+                file = new File(project.getBuildDir(), "libs/" + project.getName() + "-all-mapped.jar");
+            }
+            project.getRootProject().getDependencies().add("shadowRuntime", project.getRootProject().files(file));
+            if (!file.exists()) {
+                try {
+                    file.getParentFile().mkdirs();
+                    JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(file));
+                    jarOutputStream.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
 
         project.afterEvaluate(project1 -> {
