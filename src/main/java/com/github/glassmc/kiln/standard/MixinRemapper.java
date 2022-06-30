@@ -54,9 +54,11 @@ public class MixinRemapper extends CustomTransformer {
 
             for(FieldNode fieldNode : classNode.fields) {
                 if(this.getMixinClass(className) != null) {
-                    for(AnnotationNode annotationNode : fieldNode.visibleAnnotations) {
-                        if(annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/Shadow;")) {
-                            fieldNode.name = this.mapFieldName(className, fieldNode.name, fieldNode.desc);
+                    if (fieldNode.visibleAnnotations != null) {
+                        for(AnnotationNode annotationNode : fieldNode.visibleAnnotations) {
+                            if(annotationNode.desc.equals("Lorg/spongepowered/asm/mixin/Shadow;")) {
+                                fieldNode.name = this.mapFieldName(className, fieldNode.name, fieldNode.desc);
+                            }
                         }
                     }
                 }
