@@ -2,6 +2,7 @@ package com.github.glassmc.kiln.standard;
 
 import com.github.glassmc.kiln.common.Pair;
 import com.github.glassmc.kiln.common.Util;
+import com.github.glassmc.kiln.main.KilnMainPlugin;
 import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar;
 import org.apache.commons.io.FileUtils;
@@ -173,8 +174,8 @@ public class KilnStandardPlugin implements Plugin<Project> {
         if (project.getRootProject() != project && project.getBuildFile().exists()) {
             String displayName = project.getDisplayName();
             project.getRootProject().getDependencies().add("runtimeOnly", project.getRootProject().project(displayName.substring(displayName.indexOf("'") + 1, displayName.lastIndexOf("'"))));
-            project.getRootProject().getDependencies().add("shadowRuntime", project.getRootProject().files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all-mapped.jar")));
-            project.getRootProject().getDependencies().add("shadowRuntime", project.getRootProject().files(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar")));
+            //project.getRootProject().getDependencies().add("shadowRuntime", project.getRootProject().files(new File(project.getBuildDir(), "libs/" + project.getName() + "-all-mapped.jar")));
+            //project.getRootProject().getDependencies().add("shadowRuntime", project.getRootProject().files(new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar")));
         }
 
         project.afterEvaluate(project1 -> {
@@ -228,6 +229,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
     public void addMappingsProvider(IMappingsProvider mappingsProvider, boolean prefix) {
         this.mappingsProviders.add(new Pair<>(mappingsProvider, prefix));
+        KilnMainPlugin.getInstance().addAllMappingsProvider(mappingsProvider, prefix);
     }
 
     public List<Pair<IMappingsProvider, Boolean>> getMappingsProviders() {

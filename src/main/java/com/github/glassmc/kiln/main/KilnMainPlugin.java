@@ -1,14 +1,18 @@
 package com.github.glassmc.kiln.main;
 
+import com.github.glassmc.kiln.common.Pair;
 import com.github.glassmc.kiln.main.task.ClearMappings;
 import com.github.glassmc.kiln.main.task.GenerateRunConfiguration;
 import com.github.glassmc.kiln.standard.KilnStandardPlugin;
+import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class KilnMainPlugin implements Plugin<Project> {
 
@@ -19,6 +23,8 @@ public class KilnMainPlugin implements Plugin<Project> {
     }
 
     protected Project project;
+
+    private List<Pair<IMappingsProvider, Boolean>> allMappingsProviders = new ArrayList<>();
 
     @Override
     public void apply(Project project) {
@@ -44,6 +50,14 @@ public class KilnMainPlugin implements Plugin<Project> {
 
     public File getCache() {
         return KilnStandardPlugin.getInstance().getCache();
+    }
+
+    public void addAllMappingsProvider(IMappingsProvider mappingsProvider, boolean prefix) {
+        this.allMappingsProviders.add(new Pair<>(mappingsProvider, prefix));
+    }
+
+    public List<Pair<IMappingsProvider, Boolean>> getAllMappingsProviders() {
+        return allMappingsProviders;
     }
 
 }

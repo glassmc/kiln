@@ -3,10 +3,7 @@ package com.github.glassmc.kiln.standard;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @SuppressWarnings("unused")
 public class MixinRemapper extends CustomTransformer {
@@ -131,7 +128,14 @@ public class MixinRemapper extends CustomTransformer {
                             }
 
                             if(annotationNode.values != null && annotationNode.values.contains("at")) {
-                                List<AnnotationNode> atAnnotations = (List<AnnotationNode>) annotationNode.values.get(annotationNode.values.indexOf("at") + 1);
+                                Object atAnnotationThing = annotationNode.values.get(annotationNode.values.indexOf("at") + 1);
+
+                                List<AnnotationNode> atAnnotations;
+                                if (atAnnotationThing instanceof AnnotationNode) {
+                                    atAnnotations = Arrays.asList((AnnotationNode) atAnnotationThing);
+                                } else {
+                                    atAnnotations = (List<AnnotationNode>) atAnnotationThing;
+                                }
 
                                 for (AnnotationNode atAnnotation : atAnnotations) {
                                     if (atAnnotation.values.get(0) instanceof AnnotationNode) {

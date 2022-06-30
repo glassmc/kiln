@@ -1,9 +1,11 @@
 package com.github.glassmc.kiln.main.task;
 
+import com.github.glassmc.kiln.common.Pair;
 import com.github.glassmc.kiln.main.KilnMainPlugin;
 import com.github.glassmc.kiln.common.Util;
 import com.github.glassmc.kiln.standard.KilnStandardExtension;
 import com.github.glassmc.kiln.standard.environment.Environment;
+import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import com.github.glassmc.kiln.standard.mappings.ObfuscatedMappingsProvider;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
@@ -48,7 +50,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
     }
 
     private void generateIntelliJRunConfiguration(String environment, String version) {
-        File runConfigurationsFile = new File(".idea/runConfigurations");
+        File runConfigurationsFile = new File(this.getProject().getRootDir(), ".idea/runConfigurations");
         if (!runConfigurationsFile.exists()) {
             runConfigurationsFile.mkdirs();
         }
@@ -60,10 +62,6 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         File natives = new File(versionFile, "natives");
 
         StringBuilder vmArgsBuilder = new StringBuilder();
-        vmArgsBuilder.append("-cp ").append(new File(versionFile, environment + "-" + version + ".jar")).append(File.pathSeparator);
-        for(File dependency : Objects.requireNonNull(dependencies.listFiles())) {
-            vmArgsBuilder.append(dependency.getAbsolutePath()).append(File.pathSeparator);
-        }
 
         KilnStandardExtension extension = (KilnStandardExtension) this.getProject().getExtensions().getByName("kiln");
         Environment environment1 = extension.environment;
@@ -71,21 +69,76 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
             throw new RuntimeException("Environment not set via kiln extension.");
         }
 
-        vmArgsBuilder.append(String.join(File.pathSeparator, environment1.getRuntimeDependencies(KilnMainPlugin.getInstance().getCache()))).append(File.pathSeparator);
+        File newProjectRoot = new File(this.getProject().getRootDir(), "launch");
+        File newProject = new File(newProjectRoot, environment + "-" + version.replace(".", "_"));
+        newProject.mkdirs();
 
-        for (Project project : this.getAllProjects(getProject())) {
-            vmArgsBuilder.append(new File(project.getBuildDir(), "classesObf/java/main")).append(File.pathSeparator);
-            vmArgsBuilder.append(new File(project.getBuildDir(), "classesObf/kotlin/main")).append(File.pathSeparator);
+        File newProjectBuildScript = new File(newProject, "build.gradle");
+        try {
+            newProjectBuildScript.createNewFile();
+            FileWriter fileWriter = new FileWriter(newProjectBuildScript);
+
+            fileWriter.write("apply plugin: 'java'\n");
+
+            fileWriter.write("dependencies {\n");
+
+            fileWriter.write("runtimeOnly project(':')\n");
+
+            JSONObject versionManifest = Util.getVersionManifest(version);
+            Map<String, String> libraries = new HashMap<>();
+
+            for (Object library : versionManifest.getJSONArray("libraries")) {
+                JSONObject libraryJSON = (JSONObject) library;
+                JSONObject downloads = libraryJSON.getJSONObject("downloads");
+                if (downloads.has("artifact")) {
+                    String url = downloads.getJSONObject("artifact").getString("url");
+                    url = url.substring(url.lastIndexOf("/") + 1);
+
+                    String id = libraryJSON.getString("name");
+
+                    libraries.put(url, id);
+                }
+            }
+
+            File minecraftFile = new File(pluginCache, "minecraft");
+            File localMaven = new File(minecraftFile, "localMaven");
+
+            boolean prefix = false;
+            IMappingsProvider mappingsProvider = null;
+            for (Pair<IMappingsProvider, Boolean> mappingsProviderPair : KilnMainPlugin.getInstance().getAllMappingsProviders()) {
+                if (mappingsProviderPair.getLeft().getVersion().equals(version)) {
+                    mappingsProvider = mappingsProviderPair.getLeft();
+                    prefix = mappingsProviderPair.getRight();
+                }
+            }
+
+            Util.setupMinecraft(environment, version, pluginCache, mappingsProvider, prefix, true);
+
+            File versionMappedJARFile = new File(localMaven, "net/minecraft/" + environment + "-" + version + "/" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + "/" + environment + "-" + version + "-" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + ".jar");
+            fileWriter.write("runtimeOnly files('" + versionMappedJARFile.getAbsolutePath() + "')\n");
+
+            for(File dependency : Objects.requireNonNull(dependencies.listFiles())) {
+                if (!dependency.getName().endsWith(".jar")) continue;
+                String library = libraries.get(dependency.getName());
+                String[] id = library.split(":");
+                File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "/" + id[2] + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "-" + id[2] + ".jar");
+
+                fileWriter.write("runtimeOnly files('" + file.getAbsolutePath() + "')\n");
+            }
+
+            fileWriter.write("}\n");
+
+            fileWriter.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-
-        vmArgsBuilder.append("$Classpath$");
 
         vmArgsBuilder.append(" -Djava.library.path=").append(natives.getAbsolutePath());
 
         String name = environment.substring(0, 1).toUpperCase(Locale.ROOT) + environment.substring(1) + " " + version;
 
         String mainClass = environment1.getMainClass();
-        String module = getProject().getRootProject().getName();
+        String module = getProject().getRootProject().getName() + ".launch." + environment + "-" + version.replace(".", "_") + ".main";
         String programArguments = "--accessToken 0 --version " + environment1.getVersion(version) + " --userProperties {} --assetsDir " + new File(pluginCache, "minecraft/" + version + "/assets/");
 
         try {
@@ -135,21 +188,76 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         File natives = new File(versionFile, "natives");
 
         StringBuilder vmArgsBuilder = new StringBuilder();
-        vmArgsBuilder.append("-cp ").append(new File(versionFile, environment + "-" + version + ".jar")).append(File.pathSeparator);
-        for(File dependency : Objects.requireNonNull(dependencies.listFiles())) {
-            vmArgsBuilder.append(dependency.getAbsolutePath()).append(File.pathSeparator);
-        }
 
         KilnStandardExtension extension = (KilnStandardExtension) this.getProject().getExtensions().getByName("kiln");
         Environment environment1 = extension.environment;
-        vmArgsBuilder.append(String.join(File.pathSeparator, environment1.getRuntimeDependencies(KilnMainPlugin.getInstance().getCache()))).append(File.pathSeparator);
-
-        for (Project project : this.getAllProjects(getProject())) {
-            vmArgsBuilder.append(new File(project.getBuildDir(), "classesObf/java/main")).append(File.pathSeparator);
-            vmArgsBuilder.append(new File(project.getBuildDir(), "classesObf/kotlin/main")).append(File.pathSeparator);
+        if (environment1 == null) {
+            throw new RuntimeException("Environment not set via kiln extension.");
         }
 
-        vmArgsBuilder.append("${project_classpath}");
+        File newProjectRoot = new File(this.getProject().getRootDir(), "launch");
+        File newProject = new File(newProjectRoot, environment + "-" + version.replace(".", "_"));
+        newProject.mkdirs();
+
+        File newProjectBuildScript = new File(newProject, "build.gradle");
+        try {
+            newProjectBuildScript.createNewFile();
+            FileWriter fileWriter = new FileWriter(newProjectBuildScript);
+
+            fileWriter.write("apply plugin: 'java'\n");
+
+            fileWriter.write("dependencies {\n");
+
+            fileWriter.write("runtimeOnly project(':')\n");
+
+            JSONObject versionManifest = Util.getVersionManifest(version);
+            Map<String, String> libraries = new HashMap<>();
+
+            for (Object library : versionManifest.getJSONArray("libraries")) {
+                JSONObject libraryJSON = (JSONObject) library;
+                JSONObject downloads = libraryJSON.getJSONObject("downloads");
+                if (downloads.has("artifact")) {
+                    String url = downloads.getJSONObject("artifact").getString("url");
+                    url = url.substring(url.lastIndexOf("/") + 1);
+
+                    String id = libraryJSON.getString("name");
+
+                    libraries.put(url, id);
+                }
+            }
+
+            File minecraftFile = new File(pluginCache, "minecraft");
+            File localMaven = new File(minecraftFile, "localMaven");
+
+            boolean prefix = false;
+            IMappingsProvider mappingsProvider = null;
+            for (Pair<IMappingsProvider, Boolean> mappingsProviderPair : KilnMainPlugin.getInstance().getAllMappingsProviders()) {
+                if (mappingsProviderPair.getLeft().getVersion().equals(version)) {
+                    mappingsProvider = mappingsProviderPair.getLeft();
+                    prefix = mappingsProviderPair.getRight();
+                }
+            }
+
+            Util.setupMinecraft(environment, version, pluginCache, mappingsProvider, prefix, true);
+
+            File versionMappedJARFile = new File(localMaven, "net/minecraft/" + environment + "-" + version + "/" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + "/" + environment + "-" + version + "-" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + ".jar");
+            fileWriter.write("runtimeOnly files('" + versionMappedJARFile.getAbsolutePath() + "')\n");
+
+            for(File dependency : Objects.requireNonNull(dependencies.listFiles())) {
+                if (!dependency.getName().endsWith(".jar")) continue;
+                String library = libraries.get(dependency.getName());
+                String[] id = library.split(":");
+                File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "/" + id[2] + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "-" + id[2] + ".jar");
+
+                fileWriter.write("runtimeOnly files('" + file.getAbsolutePath() + "')\n");
+            }
+
+            fileWriter.write("}\n");
+
+            fileWriter.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         vmArgsBuilder.append(" -Djava.library.path=").append(natives.getAbsolutePath());
 
@@ -183,15 +291,35 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
                 "    <booleanAttribute key=\"org.eclipse.jdt.launching.ATTR_SHOW_CODEDETAILS_IN_EXCEPTION_MESSAGES\" value=\"true\"/>\n" +
                 "    <booleanAttribute key=\"org.eclipse.jdt.launching.ATTR_USE_CLASSPATH_ONLY_JAR\" value=\"false\"/>\n" +
                 "    <booleanAttribute key=\"org.eclipse.jdt.launching.ATTR_USE_START_ON_FIRST_THREAD\" value=\"true\"/>\n" +
+                "    <listAttribute key=\"org.eclipse.jdt.launching.CLASSPATH\">\n" +
+                "%s" +
+                "    </listAttribute>\n" +
                 "    <booleanAttribute key=\"org.eclipse.jdt.launching.DEFAULT_CLASSPATH\" value=\"false\"/>\n" +
                 "    <stringAttribute key=\"org.eclipse.jdt.launching.MAIN_TYPE\" value=\"%s\"/>\n" +
                 "    <stringAttribute key=\"org.eclipse.jdt.launching.MODULE_NAME\" value=\"%s\"/>\n" +
                 "    <stringAttribute key=\"org.eclipse.jdt.launching.PROGRAM_ARGUMENTS\" value=\"%s\"/>\n" +
                 "    <stringAttribute key=\"org.eclipse.jdt.launching.VM_ARGUMENTS\" value=\"%s\"/>\n" +
                 "    <stringAttribute key=\"org.eclipse.jdt.launching.PROJECT_ATTR\" value=\"%s\"/>\n" +
+                "    <listAttribute key=\"org.eclipse.jdt.launching.MODULEPATH\"/>\n" +
+                "    <stringAttribute key=\"org.eclipse.jdt.launching.WORKING_DIRECTORY\" value=\"${workspace_loc:%s}/run\"/>\n" +
                 "</launchConfiguration>";
 
-        String runConfigurationData = String.format(runConfigurationTemplate, module, mainClass, module, programArguments, vmArguments, module);
+        StringBuilder classpathString = new StringBuilder();
+        List<String> projects = new ArrayList<>();
+        projects.add(environment + "-" + version.replace(".", "_"));
+        projects.add(this.getProject().getName());
+        for (Project project : getAllProjects(this.getProject())) {
+            if (project.getParent() != null && !project.getParent().getName().equals("launch") && !project.getName().equals("launch") && project.getBuildFile().exists()) {
+                projects.add(project.getName().substring(project.getName().lastIndexOf(":") + 1));
+            }
+        }
+        for (String project : projects) {
+            classpathString.append(String.format(
+                            "        <listEntry value=\"&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&#10;&lt;runtimeClasspathEntry path=&quot;5&quot; projectName=&quot;%s&quot; type=&quot;1&quot;/&gt;&#10;\"/>\n" +
+                            "        <listEntry value=\"&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&#10;&lt;runtimeClasspathEntry containerPath=&quot;org.eclipse.buildship.core.gradleclasspathcontainer&quot; javaProject=&quot;%s&quot; path=&quot;5&quot; type=&quot;4&quot;/&gt;&#10;\"/>\n", project, project));
+        }
+
+        String runConfigurationData = String.format(runConfigurationTemplate, module, classpathString.toString(), mainClass, module, programArguments, vmArguments, module, module);
 
         try {
             FileWriter fileWriter = new FileWriter(name.replace(" ", "_").replace(".", "_") + ".launch");
