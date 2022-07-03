@@ -31,8 +31,8 @@ public class GlassLoaderEnvironment implements Environment {
         File loaderJar = new File(loader, "loader-" + version + ".jar");
 
         try {
-            URL url = new URL("https://glassmc.ml/repository/com/github/glassmc/loader/" + version + "/loader-" + version + ".jar");
-            FileUtils.copyURLToFile(url, loader);
+            URL url = new URL("https://glassmc.ml/repository/com/github/glassmc/loader/" + version + "/loader-" + version + "-all.jar");
+            FileUtils.copyURLToFile(url, loaderJar);
         } catch (IOException e) {
             e.printStackTrace();
         }

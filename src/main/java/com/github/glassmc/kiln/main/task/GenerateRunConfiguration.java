@@ -82,7 +82,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
             fileWriter.write("dependencies {\n");
 
-            fileWriter.write("runtimeOnly project(':')\n");
+            fileWriter.write("implementation project(':')\n");
 
             JSONObject versionManifest = Util.getVersionManifest(version);
             Map<String, String> libraries = new HashMap<>();
@@ -112,6 +112,10 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
                 }
             }
 
+            if (mappingsProvider == null) {
+                mappingsProvider = new ObfuscatedMappingsProvider();
+            }
+
             Util.setupMinecraft(environment, version, pluginCache, mappingsProvider, prefix, true);
 
             File versionMappedJARFile = new File(localMaven, "net/minecraft/" + environment + "-" + version + "/" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + "/" + environment + "-" + version + "-" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + ".jar");
@@ -124,6 +128,10 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
                 File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "/" + id[2] + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "-" + id[2] + ".jar");
 
                 fileWriter.write("runtimeOnly files('" + file.getAbsolutePath() + "')\n");
+            }
+
+            for (String runtimeDependency : environment1.getRuntimeDependencies(pluginCache)) {
+                fileWriter.write("runtimeOnly files('" + runtimeDependency + "')\n");
             }
 
             fileWriter.write("}\n");
