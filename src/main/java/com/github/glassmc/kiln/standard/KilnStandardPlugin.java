@@ -181,7 +181,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
             } else {
                 file = new File(project.getBuildDir(), "libs/" + project.getName() + "-all-mapped.jar");
             }
-            project.getRootProject().getDependencies().add("shadowRuntime", project.getRootProject().files(file));
+            project.getRootProject().getDependencies().add("shadowOnly", project.getRootProject().files(file));
             if (!file.exists()) {
                 try {
                     file.getParentFile().mkdirs();
@@ -225,11 +225,15 @@ public class KilnStandardPlugin implements Plugin<Project> {
         Configuration shadowApi = project.getConfigurations().create("shadowApi");
         project.getConfigurations().getByName("api").extendsFrom(shadowApi);
 
+        project.getConfigurations().create("shadowOnly");
+
         ShadowJar shadowJar = (ShadowJar) project.getTasks().getByName("shadowJar");
         shadowJar.getConfigurations().clear();
         shadowJar.getConfigurations().add(project.getConfigurations().getByName("shadowImplementation"));
 
         shadowJar.getConfigurations().add(project.getConfigurations().getByName("shadowApi"));
+
+        shadowJar.getConfigurations().add(project.getConfigurations().getByName("shadowOnly"));
     }
 
     public File getCache() {
