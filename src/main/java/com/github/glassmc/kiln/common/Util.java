@@ -47,7 +47,7 @@ public class Util {
             default:
                 mappingsProvider = new ObfuscatedMappingsProvider();
         }
-        plugin.addMappingsProvider(mappingsProvider, prefix);
+        plugin.addMappingsProvider(mappingsProvider, false);
 
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
@@ -58,7 +58,7 @@ public class Util {
             e.printStackTrace();
         }
 
-        Util.setupMinecraft(id, version, pluginCache, new ObfuscatedMappingsProvider(), prefix, runtime);
+        Util.setupMinecraft(id, version, pluginCache, new ObfuscatedMappingsProvider(), runtime);
 
         try {
             mappingsProvider.setup(versionFile, version);
@@ -66,15 +66,15 @@ public class Util {
             e.printStackTrace();
         }
 
-        Util.setupMinecraft(id, version, pluginCache, mappingsProvider, prefix, runtime);
+        Util.setupMinecraft(id, version, pluginCache, mappingsProvider, runtime);
     }
 
-    public static void setupMinecraft(String environment, String version, File pluginCache, IMappingsProvider mappingsProvider, boolean prefix, boolean runtime) {
+    public static void setupMinecraft(String environment, String version, File pluginCache, IMappingsProvider mappingsProvider, boolean runtime) {
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
         File versionJARFile = new File(versionFile, environment + "-" + version + ".jar");
         File localMaven = new File(minecraftFile, "localMaven");
-        File versionMappedJARFile = new File(localMaven, "net/minecraft/" + environment + "-" + version + "/" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + "/" + environment + "-" + version + "-" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + ".jar");
+        File versionMappedJARFile = new File(localMaven, "net/minecraft/" + environment + "-" + version + "/" + mappingsProvider.getID() + "/" + environment + "-" + version + "-" + mappingsProvider.getID() + ".jar");
 
         if (!versionMappedJARFile.exists()) {
             try {
@@ -91,13 +91,14 @@ public class Util {
                     if (!versionLibraries.exists()) {
                         System.out.printf("Downloading %s libraries...%n", version);
                         downloadLibraries(versionManifest, versionLibraries);
+                        mapLibraries(versionManifest, versionLibraries, localMaven, version);
                     }
 
-                    File file = new File(versionLibraries, prefix + ".cache");
-                    if (!file.exists()) {
-                        System.out.printf("Mapping %s libraries...%n", version);
-                        mapLibraries(versionManifest, versionLibraries, localMaven, version, prefix);
-                        FileUtils.writeStringToFile(file, "", StandardCharsets.UTF_8);
+                    //File file = new File(versionLibraries, prefix + ".cache");
+                    if (!versionLibraries.exists()) {
+                        //System.out.printf("Mapping %s libraries...%n", version);
+
+                        //FileUtils.writeStringToFile(file, "", StandardCharsets.UTF_8);
                     }
 
                     if (!versionNatives.exists()) {
@@ -154,13 +155,14 @@ public class Util {
 
                 Remapper remapper = mappingsProvider.getRemapper(IMappingsProvider.Direction.TO_NAMED);
 
+                List<String> mains = Arrays.asList("net/minecraft/client/main/Main");
                 Remapper remapperWrapper = new Remapper() {
 
                     @Override
                     public String map(String name) {
                         String mapped = remapper.map(name);
-                        if ((input.getJarEntry(name + ".class") != null || prefixClasses.contains(mapped)) && mappingsProvider.getVersion() != null) {
-                            if (prefix) {
+                        if ((input.getJarEntry(name + ".class") != null || prefixClasses.contains(mapped)) && mappingsProvider.getVersion() != null && !mains.contains(name)) {
+                            if (false) {
                                 return "v" + version.replace(".", "_") + "/" + mapped;
                             } else {
                                 return mapped;
@@ -212,7 +214,7 @@ public class Util {
                 }
                 outputStream.close();
 
-                File versionPom = new File(versionMappedJARFile.getParentFile(), environment + "-" + version + "-" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + ".pom");
+                File versionPom = new File(versionMappedJARFile.getParentFile(), environment + "-" + version + "-" + mappingsProvider.getID() + ".pom");
                 StringBuilder string =
                         new StringBuilder(
                                 "<project>\n" +
@@ -220,14 +222,15 @@ public class Util {
                                 "\n" +
                                 "    <groupId>net.minecraft</groupId>\n" +
                                 "    <artifactId>" + environment + "-" + version + "</artifactId>\n" +
-                                "    <version>" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + "</version>\n" +
+                                "    <version>" + mappingsProvider.getID() + "</version>\n" +
                                 "    <dependencies>\n");
 
                 for (String[] dependency : dependencies) {
-                    string.append("        <dependency>\n" + "            <groupId>").append(dependency[0]).append("</groupId>\n").append("            <artifactId>").append(dependency[1]).append("-").append(version).append("-").append(prefix ? "prefix" : "noprefix").append("</artifactId>\n").append("            <version>").append(dependency[2]).append("</version>\n").append("        </dependency>\n");
+                    string.append("        <dependency>\n" + "            <groupId>").append(dependency[0]).append("</groupId>\n").append("            <artifactId>").append(dependency[1]).append("-").append(version).append("</artifactId>\n").append("            <version>").append(dependency[2]).append("</version>\n").append("        </dependency>\n");
                 }
 
                 string.append("    </dependencies>\n" + "</project>\n");
+                System.out.println(versionPom);
 
                 FileUtils.writeStringToFile(versionPom, string.toString(), StandardCharsets.UTF_8);
             } catch (IOException e) {
@@ -248,7 +251,7 @@ public class Util {
         }
     }
 
-    private static void mapLibraries(JSONObject versionManifest, File versionLibraries, File localMaven, String version, boolean prefix) throws IOException {
+    private static void mapLibraries(JSONObject versionManifest, File versionLibraries, File localMaven, String version) throws IOException {
         List<String> names = new ArrayList<>();
 
         for (File library : Objects.requireNonNull(versionLibraries.listFiles())) {
@@ -284,7 +287,7 @@ public class Util {
             if (!library.getName().endsWith(".jar")) continue;
 
             String[] id = libraries.get(library.getName()).split(":");
-            File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "/" + id[2] + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "-" + id[2] + ".jar");
+            File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + "/" + id[2] + "/" + id[1] + "-" + version + "-" + id[2] + ".jar");
             file.getParentFile().mkdirs();
 
             JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(file));
@@ -296,7 +299,7 @@ public class Util {
 
                 @Override
                 public String map(String name) {
-                    if (names.contains(name) && prefix) {
+                    if (names.contains(name) && false) {
                         return "v" + version.replace(".", "_") + "/" + name;
                     }
                     return name;
@@ -309,13 +312,13 @@ public class Util {
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
                 if (entry.getName().endsWith(".class")) {
-                    ClassReader classReader = new ClassReader(IOUtils.readFully(jarFile.getInputStream(entry), (int) entry.getSize()));
-                    ClassWriter writer = new ClassWriter(0);
-                    ClassVisitor visitor = new ClassRemapper(writer, remapper);
-                    classReader.accept(visitor, 0);
+                    //ClassReader classReader = new ClassReader(IOUtils.readFully(jarFile.getInputStream(entry), (int) entry.getSize()));
+                    //ClassWriter writer = new ClassWriter(0);
+                    //ClassVisitor visitor = new ClassRemapper(writer, remapper);
+                    //classReader.accept(visitor, 0);
 
-                    jarOutputStream.putNextEntry(new JarEntry(remapper.map(entry.getName().replace(".class", "")) + ".class"));
-                    jarOutputStream.write(writer.toByteArray());
+                    jarOutputStream.putNextEntry(new JarEntry(entry.getName().replace(".class", "") + ".class"));
+                    jarOutputStream.write(IOUtils.readFully(jarFile.getInputStream(entry), (int) entry.getSize()));
                     jarOutputStream.closeEntry();
                 } else {
                     if (!added.contains(entry.getName()) && !entry.getName().contains("/")) {
@@ -335,7 +338,7 @@ public class Util {
                     "    <modelVersion>4.0.0</modelVersion>\n" +
                     "\n" +
                     "    <groupId>" + id[0] + "</groupId>\n" +
-                    "    <artifactId>" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "</artifactId>\n" +
+                    "    <artifactId>" + id[1] + "-" + version + "</artifactId>\n" +
                     "    <version>" + id[2] + "</version>\n" +
                     "</project>\n", StandardCharsets.UTF_8);
         }
@@ -471,56 +474,85 @@ public class Util {
             JSONObject library = (JSONObject) element;
 
             if(library.has("natives")) {
-                String osName;
-                switch(SystemUtil.getOSType()) {
-                    case WINDOWS:
-                        osName = "windows";
-                        break;
-                    case LINUX:
-                        osName = "linux";
-                        break;
-                    case MAC:
-                        osName = "osx";
-                        break;
-                    default:
-                        osName = "";
-                        break;
+                boolean allowed = true;
+                if (library.has("rules")) {
+                    allowed = false;
+
+                    String osName = "";
+                    switch (SystemUtil.getOSType()) {
+                        case WINDOWS:
+                            osName = "windows";
+                            break;
+                        case LINUX:
+                            osName = "linux";
+                            break;
+                        case MAC:
+                            osName = "osx";
+                            break;
+                        case UNKNOWN:
+                            break;
+                    }
+
+                    for (Object item : library.getJSONArray("rules")) {
+                        JSONObject rule = (JSONObject) item;
+                        if (!rule.has("os") || (rule.has("os") && rule.getJSONObject("os").getString("name").equals(osName))) {
+                            allowed = rule.getString("action").equals("allow");
+                        }
+                    }
                 }
 
-                int osArch;
-                switch(SystemUtil.getArchitecture()) {
-                    case X32:
-                        osArch = 32;
-                        break;
-                    case X64:
-                        osArch = 64;
-                        break;
-                    default:
-                        osArch = -1;
-                        break;
-                }
+                if (allowed) {
+                    String osName;
+                    switch(SystemUtil.getOSType()) {
+                        case WINDOWS:
+                            osName = "windows";
+                            break;
+                        case LINUX:
+                            osName = "linux";
+                            break;
+                        case MAC:
+                            osName = "osx";
+                            break;
+                        default:
+                            osName = "";
+                            break;
+                    }
 
-                JSONObject natives = library.getJSONObject("natives");
-                if(!natives.has(osName)) {
-                    continue;
-                }
+                    int osArch;
+                    switch(SystemUtil.getArchitecture()) {
+                        case X32:
+                            osArch = 32;
+                            break;
+                        case X64:
+                            osArch = 64;
+                            break;
+                        default:
+                            osArch = -1;
+                            break;
+                    }
 
-                String nativesType = natives.getString(osName).replace("${arch}", String.valueOf(osArch));
-                JSONObject classifiers = library.getJSONObject("downloads").getJSONObject("classifiers");
-                if(!classifiers.has(nativesType)) {
-                    continue;
-                }
+                    JSONObject natives = library.getJSONObject("natives");
+                    if(!natives.has(osName)) {
+                        continue;
+                    }
 
-                String url = classifiers.getJSONObject(nativesType).getString("url");
-                File downloadedJarFile = new File(versionNatives, library.getString("name").replace(":", ";") + ".jar");
-                FileUtils.copyURLToFile(new URL(url), downloadedJarFile);
+                    String nativesType = natives.getString(osName).replace("${arch}", String.valueOf(osArch));
+                    JSONObject classifiers = library.getJSONObject("downloads").getJSONObject("classifiers");
+                    if(!classifiers.has(nativesType)) {
+                        continue;
+                    }
 
-                JarFile jarFile = new JarFile(downloadedJarFile);
-                Enumeration<JarEntry> entries = jarFile.entries();
-                while(entries.hasMoreElements()) {
-                    JarEntry entry = entries.nextElement();
-                    if(!entry.getName().contains("/")) {
-                        FileUtils.copyInputStreamToFile(jarFile.getInputStream(entry), new File(versionNatives, entry.getName()));
+                    String url = classifiers.getJSONObject(nativesType).getString("url");
+                    File downloadedJarFile = new File(versionNatives, library.getString("name").replace(":", ";") + ".jar");
+                    FileUtils.copyURLToFile(new URL(url), downloadedJarFile);
+
+                    JarFile jarFile = new JarFile(downloadedJarFile);
+                    Enumeration<JarEntry> entries = jarFile.entries();
+                    while(entries.hasMoreElements()) {
+                        JarEntry entry = entries.nextElement();
+                        if(!entry.getName().contains("/")) {
+                            FileUtils.copyInputStreamToFile(jarFile.getInputStream(entry), new File(versionNatives, entry.getName()));
+                        }
                     }
                 }
             }

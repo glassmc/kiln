@@ -49,26 +49,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         return projects;
     }
 
-    private void generateIntelliJRunConfiguration(String environment, String version) {
-        File runConfigurationsFile = new File(this.getProject().getRootDir(), ".idea/runConfigurations");
-        if (!runConfigurationsFile.exists()) {
-            runConfigurationsFile.mkdirs();
-        }
-
-        File pluginCache = KilnMainPlugin.getInstance().getCache();
-        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider(), false, true);
-        File versionFile = new File(pluginCache, "minecraft/" + version);
-        File dependencies = new File(versionFile, "libraries");
-        File natives = new File(versionFile, "natives");
-
-        StringBuilder vmArgsBuilder = new StringBuilder();
-
-        KilnStandardExtension extension = (KilnStandardExtension) this.getProject().getExtensions().getByName("kiln");
-        Environment environment1 = extension.environment;
-        if (environment1 == null) {
-            throw new RuntimeException("Environment not set via kiln extension.");
-        }
-
+    private void generateBuildScript(String version, String environment, File pluginCache, File dependencies, Environment environment1) {
         File newProjectRoot = new File(this.getProject().getRootDir(), "launch");
         File newProject = new File(newProjectRoot, environment + "-" + version.replace(".", "_"));
         newProject.mkdirs();
@@ -79,6 +60,16 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
             FileWriter fileWriter = new FileWriter(newProjectBuildScript);
 
             fileWriter.write("apply plugin: 'java'\n");
+
+            fileWriter.write("repositories {\n" +
+                    "    var main = project.rootProject\n" +
+                    "\n" +
+                    "    for (repository in main.getRepositories()) {\n" +
+                    "        maven {\n" +
+                    "            url = repository.url\n" +
+                    "        }\n" +
+                    "    }\n" +
+                    "}\n");
 
             fileWriter.write("dependencies {\n");
 
@@ -103,12 +94,12 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
             File minecraftFile = new File(pluginCache, "minecraft");
             File localMaven = new File(minecraftFile, "localMaven");
 
-            boolean prefix = false;
+            //boolean prefix = false;
             IMappingsProvider mappingsProvider = null;
             for (Pair<IMappingsProvider, Boolean> mappingsProviderPair : KilnMainPlugin.getInstance().getAllMappingsProviders()) {
                 if (mappingsProviderPair.getLeft().getVersion().equals(version)) {
                     mappingsProvider = mappingsProviderPair.getLeft();
-                    prefix = mappingsProviderPair.getRight();
+                    //prefix = mappingsProviderPair.getRight();
                 }
             }
 
@@ -116,16 +107,16 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
                 mappingsProvider = new ObfuscatedMappingsProvider();
             }
 
-            Util.setupMinecraft(environment, version, pluginCache, mappingsProvider, prefix, true);
+            Util.setupMinecraft(environment, version, pluginCache, mappingsProvider, true);
 
-            File versionMappedJARFile = new File(localMaven, "net/minecraft/" + environment + "-" + version + "/" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + "/" + environment + "-" + version + "-" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + ".jar");
+            File versionMappedJARFile = new File(localMaven, "net/minecraft/" + environment + "-" + version + "/" + mappingsProvider.getID() + "/" + environment + "-" + version + "-" + mappingsProvider.getID() + ".jar");
             fileWriter.write("runtimeOnly files('" + versionMappedJARFile.getAbsolutePath() + "')\n");
 
             for(File dependency : Objects.requireNonNull(dependencies.listFiles())) {
                 if (!dependency.getName().endsWith(".jar")) continue;
                 String library = libraries.get(dependency.getName());
                 String[] id = library.split(":");
-                File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "/" + id[2] + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "-" + id[2] + ".jar");
+                File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + "/" + id[2] + "/" + id[1] + "-" + version + "-" + id[2] + ".jar");
 
                 fileWriter.write("runtimeOnly files('" + file.getAbsolutePath() + "')\n");
             }
@@ -140,6 +131,29 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void generateIntelliJRunConfiguration(String environment, String version) {
+        File runConfigurationsFile = new File(this.getProject().getRootDir(), ".idea/runConfigurations");
+        if (!runConfigurationsFile.exists()) {
+            runConfigurationsFile.mkdirs();
+        }
+
+        File pluginCache = KilnMainPlugin.getInstance().getCache();
+        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider(), true);
+        File versionFile = new File(pluginCache, "minecraft/" + version);
+        File dependencies = new File(versionFile, "libraries");
+        File natives = new File(versionFile, "natives");
+
+        StringBuilder vmArgsBuilder = new StringBuilder();
+
+        KilnStandardExtension extension = (KilnStandardExtension) this.getProject().getExtensions().getByName("kiln");
+        Environment environment1 = extension.environment;
+        if (environment1 == null) {
+            throw new RuntimeException("Environment not set via kiln extension.");
+        }
+
+        generateBuildScript(version, environment, pluginCache, dependencies, environment1);
 
         vmArgsBuilder.append(" -Djava.library.path=").append(natives.getAbsolutePath());
 
@@ -190,7 +204,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
     private void generateEclipseRunConfiguration(String environment, String version) {
         File pluginCache = KilnMainPlugin.getInstance().getCache();
-        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider(), false, true);
+        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider(), true);
         File versionFile = new File(pluginCache, "minecraft/" + version);
         File dependencies = new File(versionFile, "libraries");
         File natives = new File(versionFile, "natives");
@@ -203,69 +217,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
             throw new RuntimeException("Environment not set via kiln extension.");
         }
 
-        File newProjectRoot = new File(this.getProject().getRootDir(), "launch");
-        File newProject = new File(newProjectRoot, environment + "-" + version.replace(".", "_"));
-        newProject.mkdirs();
-
-        File newProjectBuildScript = new File(newProject, "build.gradle");
-        try {
-            newProjectBuildScript.createNewFile();
-            FileWriter fileWriter = new FileWriter(newProjectBuildScript);
-
-            fileWriter.write("apply plugin: 'java'\n");
-
-            fileWriter.write("dependencies {\n");
-
-            fileWriter.write("runtimeOnly project(':')\n");
-
-            JSONObject versionManifest = Util.getVersionManifest(version);
-            Map<String, String> libraries = new HashMap<>();
-
-            for (Object library : versionManifest.getJSONArray("libraries")) {
-                JSONObject libraryJSON = (JSONObject) library;
-                JSONObject downloads = libraryJSON.getJSONObject("downloads");
-                if (downloads.has("artifact")) {
-                    String url = downloads.getJSONObject("artifact").getString("url");
-                    url = url.substring(url.lastIndexOf("/") + 1);
-
-                    String id = libraryJSON.getString("name");
-
-                    libraries.put(url, id);
-                }
-            }
-
-            File minecraftFile = new File(pluginCache, "minecraft");
-            File localMaven = new File(minecraftFile, "localMaven");
-
-            boolean prefix = false;
-            IMappingsProvider mappingsProvider = null;
-            for (Pair<IMappingsProvider, Boolean> mappingsProviderPair : KilnMainPlugin.getInstance().getAllMappingsProviders()) {
-                if (mappingsProviderPair.getLeft().getVersion().equals(version)) {
-                    mappingsProvider = mappingsProviderPair.getLeft();
-                    prefix = mappingsProviderPair.getRight();
-                }
-            }
-
-            Util.setupMinecraft(environment, version, pluginCache, mappingsProvider, prefix, true);
-
-            File versionMappedJARFile = new File(localMaven, "net/minecraft/" + environment + "-" + version + "/" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + "/" + environment + "-" + version + "-" + mappingsProvider.getID() + (prefix ? "-prefix" : "-noprefix") + ".jar");
-            fileWriter.write("runtimeOnly files('" + versionMappedJARFile.getAbsolutePath() + "')\n");
-
-            for(File dependency : Objects.requireNonNull(dependencies.listFiles())) {
-                if (!dependency.getName().endsWith(".jar")) continue;
-                String library = libraries.get(dependency.getName());
-                String[] id = library.split(":");
-                File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "/" + id[2] + "/" + id[1] + "-" + version + (prefix ? "-prefix" : "-noprefix") + "-" + id[2] + ".jar");
-
-                fileWriter.write("runtimeOnly files('" + file.getAbsolutePath() + "')\n");
-            }
-
-            fileWriter.write("}\n");
-
-            fileWriter.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        generateBuildScript(version, environment, pluginCache, dependencies, environment1);
 
         vmArgsBuilder.append(" -Djava.library.path=").append(natives.getAbsolutePath());
 

@@ -599,6 +599,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
             Map<String, Pair<Map<String, String>, List<String>>> context = new HashMap<>();
             for (Pair<IMappingsProvider, Boolean> mappingsProvider : mappingsProviders) {
+                System.out.println(mappingsProvider);
                 context.putAll(mappingsProvider.getLeft().getContext(IMappingsProvider.Side.NAMED, mappingsProvider.getRight()));
             }
 
