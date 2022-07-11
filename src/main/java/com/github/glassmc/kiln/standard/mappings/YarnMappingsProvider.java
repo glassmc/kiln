@@ -2,6 +2,7 @@ package com.github.glassmc.kiln.standard.mappings;
 
 import com.github.glassmc.kiln.common.Pair;
 import net.fabricmc.mapping.tree.*;
+import net.fabricmc.mapping.util.EntryTriple;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONObject;
 import org.objectweb.asm.ClassReader;
@@ -151,6 +152,11 @@ public class YarnMappingsProvider implements IMappingsProvider {
             }
 
             @Override
+            public String mapRecordComponentName(String owner, String name, String descriptor) {
+                return this.mapFieldName(owner, name, descriptor);
+            }
+
+            @Override
             public String mapVariableName(String owner, String methodOwner, String methodDesc, String name, int index) {
                 return result.mapVariableName(initial.map(owner), initial.mapMethodName(owner, methodOwner, methodDesc), initial.mapDesc(methodDesc), name, index);
             }
@@ -160,7 +166,36 @@ public class YarnMappingsProvider implements IMappingsProvider {
 
     @Override
     public Map<String, Pair<Map<String, String>, List<String>>> getContext(Side side, boolean prefix) {
-        return new HashMap<>();
+        if (side == Side.NAMED) {
+            Map<String, Pair<Map<String, String>, List<String>>> context = new HashMap<>();
+
+            Remapper remapperObf = this.getRemapper(Direction.TO_OBFUSCATED);
+            Remapper obfToIntermediary = TinyRemapper.create(this.intermediaryTree, "official", "intermediary");
+
+            for (ClassDef classDef : namedTree.getClasses()) {
+                Pair<Map<String, String>, List<String>> pair = new Pair<>(new HashMap<>(), new ArrayList<>());
+                addAllMethods(namedTree, classDef, pair.getLeft(), remapperObf, obfToIntermediary);
+                context.put(classDef.getName("named"), pair);
+            }
+
+            return context;
+        }
+        return null;
+    }
+
+    private void addAllMethods(TinyTree tinyTree, ClassDef classDef, Map<String, String> methods, Remapper remapperObf, Remapper obfToIntermediary) {
+        for (MethodDef methodDef : classDef.getMethods()) {
+            methods.put(methodDef.getName("named"), methodDef.getDescriptor("named"));
+        }
+
+        if (this.parentClasses.get(remapperObf.map(classDef.getName("named"))) != null) {
+            for (String parentClass : this.parentClasses.get(remapperObf.map(classDef.getName("named")))) {
+                ClassDef parentClassDef = tinyTree.getDefaultNamespaceClassMap().get(obfToIntermediary.map(parentClass));
+                if (parentClassDef != null) {
+                    addAllMethods(tinyTree, parentClassDef, methods, remapperObf, obfToIntermediary);
+                }
+            }
+        }
     }
 
     private List<ClassDef> getClasses(String obfName, Direction direction) {

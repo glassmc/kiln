@@ -160,6 +160,11 @@ public class MCPMappingsProvider implements IMappingsProvider {
                 return name;
             }
 
+            @Override
+            public String mapRecordComponentName(String owner, String name, String descriptor) {
+                return this.mapFieldName(owner, name, descriptor);
+            }
+
             private final List<String> staticMethods = new ArrayList<>();
 
             @Override
@@ -189,26 +194,16 @@ public class MCPMappingsProvider implements IMappingsProvider {
 
             Map<String, Pair<Map<String, String>, List<String>>> context = new HashMap<>();
 
-            Remapper versionAdder = new Remapper() {
-                @Override
-                public String map(String name) {
-                    if (prefix) {
-                        return "v" + version.replace(".", "_") + "/" + name;
-                    }
-                    return name;
-                }
-            };
-
             for (Map.Entry<String, String> className : searge.getClassNames().entrySet()) {
-                String className1 = versionAdder.map(className.getValue());
+                String className1 = className.getValue();
 
                 context.put(className1, new Pair<>(new HashMap<>(), new ArrayList<>()));
             }
 
             for (Map.Entry<EntryTriple, String> methodName : searge.getMethodNames().entrySet()) {
-                String className = versionAdder.map(remapper.map(methodName.getKey().getOwner()));
+                String className = remapper.map(methodName.getKey().getOwner());
                 String methodName1 = named.mapMethodName(className, methodName.getValue(), null);
-                String methodDesc = versionAdder.mapDesc(remapper.mapMethodDesc(methodName.getKey().getDescriptor()));
+                String methodDesc = remapper.mapMethodDesc(methodName.getKey().getDescriptor());
                 context.get(className).getLeft().put(methodName1, methodDesc);
             }
 

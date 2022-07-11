@@ -178,6 +178,11 @@ public class Util {
                     }
 
                     @Override
+                    public String mapRecordComponentName(String owner, String name, String descriptor) {
+                        return remapper.mapRecordComponentName(owner, name, descriptor);
+                    }
+
+                    @Override
                     public String mapMethodName(String owner, String name, String descriptor) {
                         return remapper.mapMethodName(owner, name, descriptor);
                     }
@@ -295,39 +300,20 @@ public class Util {
             JarFile jarFile = new JarFile(library);
             Enumeration<JarEntry> entries = jarFile.entries();
 
-            Remapper remapper = new Remapper() {
-
-                @Override
-                public String map(String name) {
-                    if (names.contains(name) && false) {
-                        return "v" + version.replace(".", "_") + "/" + name;
-                    }
-                    return name;
-                }
-
-            };
-
             List<String> added = new ArrayList<>();
 
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
                 if (entry.getName().endsWith(".class")) {
-                    //ClassReader classReader = new ClassReader(IOUtils.readFully(jarFile.getInputStream(entry), (int) entry.getSize()));
-                    //ClassWriter writer = new ClassWriter(0);
-                    //ClassVisitor visitor = new ClassRemapper(writer, remapper);
-                    //classReader.accept(visitor, 0);
-
                     jarOutputStream.putNextEntry(new JarEntry(entry.getName().replace(".class", "") + ".class"));
                     jarOutputStream.write(IOUtils.readFully(jarFile.getInputStream(entry), (int) entry.getSize()));
                     jarOutputStream.closeEntry();
                 } else {
-                    if (!added.contains(entry.getName()) && !entry.getName().contains("/")) {
-                        jarOutputStream.putNextEntry(new JarEntry(entry.getName()));
-                        InputStream inputStream = jarFile.getInputStream(entry);
-                        jarOutputStream.write(IOUtils.readFully(inputStream, inputStream.available()));
-                        jarOutputStream.closeEntry();
-                        added.add(entry.getName());
-                    }
+                    jarOutputStream.putNextEntry(new JarEntry(entry.getName()));
+                    InputStream inputStream = jarFile.getInputStream(entry);
+                    jarOutputStream.write(IOUtils.readFully(inputStream, inputStream.available()));
+                    jarOutputStream.closeEntry();
+                    added.add(entry.getName());
                 }
             }
 

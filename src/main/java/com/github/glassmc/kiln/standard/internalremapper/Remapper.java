@@ -114,7 +114,9 @@ public abstract class Remapper {
             return new Handle(
                     handle.getTag(),
                     mapType(handle.getOwner()),
-                    mapMethodName(handle.getOwner(), handle.getName(), handle.getDesc()),
+                    handle.getTag() <= Opcodes.H_PUTSTATIC
+                            ? mapFieldName(handle.getOwner(), handle.getName(), handle.getDesc())
+                            : mapMethodName(handle.getOwner(), handle.getName(), handle.getDesc()),
                     handle.getTag() <= Opcodes.H_PUTSTATIC
                             ? mapDesc(handle.getDesc())
                             : mapMethodDesc(handle.getDesc()),

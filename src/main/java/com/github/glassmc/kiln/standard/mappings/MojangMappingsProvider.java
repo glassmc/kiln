@@ -8,8 +8,8 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 import com.github.glassmc.kiln.common.Pair;
-import com.github.glassmc.kiln.standard.remapper.TinyRemapper;
-import net.fabricmc.mapping.tree.ClassDef;
+import com.github.glassmc.kiln.standard.remapper.HashRemapper;
+import net.fabricmc.mapping.util.EntryTriple;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONObject;
 import com.github.glassmc.kiln.standard.internalremapper.Remapper;
@@ -24,8 +24,8 @@ import org.objectweb.asm.tree.ClassNode;
 public class MojangMappingsProvider implements IMappingsProvider {
 
     private String version;
-    private ReversibleRemapper deobfuscator;
-    private ReversibleRemapper obfuscator;
+    private HashRemapper deobfuscator;
+    private HashRemapper obfuscator;
 
     private Map<String, List<String>> parentClasses;
 
@@ -117,6 +117,11 @@ public class MojangMappingsProvider implements IMappingsProvider {
             }
 
             @Override
+            public String mapRecordComponentName(String owner, String name, String descriptor) {
+                return this.mapFieldName(owner, name, descriptor);
+            }
+
+            @Override
             public String mapVariableName(String owner, String methodOwner, String methodDesc, String name, int index) {
                 return remapper.mapVariableName(owner, methodOwner, methodDesc, name, index);
             }
@@ -126,6 +131,26 @@ public class MojangMappingsProvider implements IMappingsProvider {
 
     @Override
     public Map<String, Pair<Map<String, String>, List<String>>> getContext(Side side, boolean prefix) {
+        if (side == Side.NAMED) {
+            Remapper remapper = this.getRemapper(Direction.TO_NAMED);
+
+            Map<String, Pair<Map<String, String>, List<String>>> context = new HashMap<>();
+
+            for (Map.Entry<String, String> className : deobfuscator.getClassNames().entrySet()) {
+                String className1 = className.getValue();
+
+                context.put(className1, new Pair<>(new HashMap<>(), new ArrayList<>()));
+            }
+
+            for (Map.Entry<EntryTriple, String> methodName : deobfuscator.getMethodNames().entrySet()) {
+                String className = remapper.map(methodName.getKey().getOwner());
+                String methodDesc = remapper.mapMethodDesc(methodName.getKey().getDescriptor());
+                String methodName1 = deobfuscator.mapMethodName(className, methodName.getValue(), methodDesc);
+                context.get(className).getLeft().put(methodName1, methodDesc);
+            }
+
+            return context;
+        }
         return null;
     }
 
