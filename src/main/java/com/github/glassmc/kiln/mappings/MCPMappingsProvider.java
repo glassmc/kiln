@@ -12,8 +12,10 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import com.github.glassmc.kiln.Pair;
+import com.github.glassmc.kiln.Util;
 import net.fabricmc.mapping.util.EntryTriple;
 import org.apache.commons.io.FileUtils;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import com.github.glassmc.kiln.internalremapper.Remapper;
 
@@ -29,6 +31,7 @@ import org.objectweb.asm.tree.ClassNode;
 public class MCPMappingsProvider implements IMappingsProvider {
 
     private String version;
+    private String mappingsVersion;
 
     private HashRemapper searge;
     private ReversibleRemapper reversedSearge;
@@ -38,8 +41,9 @@ public class MCPMappingsProvider implements IMappingsProvider {
     private Map<String, List<String>> parentClasses;
 
     @Override
-    public void setup(File minecraftFile, String version) throws NoSuchMappingsException {
+    public void setup(File minecraftFile, String version, String mappingsVersion) throws NoSuchMappingsException {
         this.version = version;
+        this.mappingsVersion = mappingsVersion;
 
         File mappingsJson = new File(minecraftFile.getParentFile().getParentFile(), "mappings.json");
         JSONObject jsonObject = null;
@@ -49,29 +53,46 @@ public class MCPMappingsProvider implements IMappingsProvider {
             e.printStackTrace();
         }
 
-        JSONObject mappings = jsonObject.getJSONObject("mcp").getJSONObject(version);
-
-        if (mappings == null) {
-            throw new NoSuchMappingsException(version);
-        }
+        JSONArray mappings = jsonObject.getJSONArray("mcp");
 
         File temp = new File(minecraftFile, "temp");
-        Pair<String, String> mappingURLs = new Pair<>(mappings.getString("srg"), mappings.getString("mcp"));
 
-        URL seargeURL;
-        URL namedURL;
+        boolean found = false;
+        URL seargeURL = null;
+        URL mcpURL = null;
+        for (Object possibleURL : mappings) {
+            JSONObject jsonObject1 = (JSONObject) possibleURL;
 
-        try {
+            try {
+                seargeURL = new URL(jsonObject1.getString("srg").replace("%version%", version).replace("%mappingsVersion%", mappingsVersion));
+                mcpURL = new URL(jsonObject1.getString("mcp").replace("%version%", version).replace("%mappingsVersion%", mappingsVersion));
+
+                if (Util.isValid(seargeURL) && Util.isValid(mcpURL)) {
+                    found = true;
+                    break;
+                }
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (!found) {
+            throw new NoSuchMappingsException(version + "-" + mappingsVersion);
+        }
+
+        //Pair<String, String> mappingURLs = new Pair<>(mappings.getString("srg"), mappings.getString("mcp"));
+
+        /*try {
             seargeURL = new URL(Objects.requireNonNull(mappingURLs.getLeft()));
-            namedURL = new URL(Objects.requireNonNull(mappingURLs.getRight()));
+            mcpURL = new URL(Objects.requireNonNull(mappingURLs.getRight()));
         } catch(MalformedURLException e) {
             e.printStackTrace();
             return;
-        }
+        }*/
 
         try {
             String seargeFileBase = seargeURL.getFile().substring(seargeURL.getFile().lastIndexOf("/")).substring(1).replace(".zip", "");
-            String namedFileBase = namedURL.getFile().substring(namedURL.getFile().lastIndexOf("/")).substring(1).replace(".zip", "");
+            String namedFileBase = mcpURL.getFile().substring(mcpURL.getFile().lastIndexOf("/")).substring(1).replace(".zip", "");
 
             File seargeMappings = new File(temp, seargeFileBase + "-joined.csrg");
             File seargeMappingsParams = new File(temp, seargeFileBase + "-joined.exc");
@@ -83,7 +104,7 @@ public class MCPMappingsProvider implements IMappingsProvider {
             if(!seargeMappings.exists() || !fieldMappings.exists()) {
                 File seargeMappingsFile = new File(temp, seargeFileBase + ".zip");
                 File namedMappingsFile = new File(temp, namedFileBase + ".zip");
-                FileUtils.copyURLToFile(namedURL, namedMappingsFile);
+                FileUtils.copyURLToFile(mcpURL, namedMappingsFile);
                 FileUtils.copyURLToFile(seargeURL, seargeMappingsFile);
 
                 ZipFile seargeZIPFile = new ZipFile(seargeMappingsFile);
@@ -247,6 +268,11 @@ public class MCPMappingsProvider implements IMappingsProvider {
     @Override
     public String getVersion() {
         return version;
+    }
+
+    @Override
+    public String getMappingsVersion() {
+        return mappingsVersion;
     }
 
     @Override

@@ -10,7 +10,7 @@ import java.util.Map;
 public class ObfuscatedMappingsProvider implements IMappingsProvider {
 
     @Override
-    public void setup(File minecraftFile, String version) {
+    public void setup(File minecraftFile, String version, String mappingsVersion) {
 
     }
 
@@ -31,6 +31,11 @@ public class ObfuscatedMappingsProvider implements IMappingsProvider {
 
     @Override
     public String getVersion() {
+        return null;
+    }
+
+    @Override
+    public String getMappingsVersion() {
         return null;
     }
 

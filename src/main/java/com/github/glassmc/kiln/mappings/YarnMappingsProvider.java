@@ -1,8 +1,10 @@
 package com.github.glassmc.kiln.mappings;
 
 import com.github.glassmc.kiln.Pair;
+import com.github.glassmc.kiln.Util;
 import net.fabricmc.mapping.tree.*;
 import org.apache.commons.io.FileUtils;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.objectweb.asm.ClassReader;
 import com.github.glassmc.kiln.internalremapper.Remapper;
@@ -25,10 +27,12 @@ public class YarnMappingsProvider implements IMappingsProvider {
     private TinyTree intermediaryTree;
     private Map<String, List<String>> parentClasses;
     private String version;
+    private String mappingsVersion;
 
     @Override
-    public void setup(File minecraftFile, String version) throws NoSuchMappingsException {
+    public void setup(File minecraftFile, String version, String mappingsVersion) throws NoSuchMappingsException {
         this.version = version;
+        this.mappingsVersion = mappingsVersion;
 
         File mappingsJson = new File(minecraftFile.getParentFile().getParentFile(), "mappings.json");
         JSONObject jsonObject = null;
@@ -38,30 +42,35 @@ public class YarnMappingsProvider implements IMappingsProvider {
             e.printStackTrace();
         }
 
-        JSONObject mappings = jsonObject.getJSONObject("yarn").getJSONObject(version);
+        JSONArray mappings = jsonObject.getJSONArray("yarn");
 
-        if (mappings == null) {
-            throw new NoSuchMappingsException(version);
-        }
-
+        boolean found = false;
+        URL intermediaryURL = null;
+        URL namedURL = null;
         File temp = new File(minecraftFile, "temp");
-        Pair<String, String> mappingURLs = new Pair<>(mappings.getString("intermediary"), mappings.getString("named"));
+        for (Object possibleURL : mappings) {
+            JSONObject jsonObject1 = (JSONObject) possibleURL;
 
-        URL intermediaryURL;
-        URL namedURL;
+            try {
+                intermediaryURL = new URL(jsonObject1.getString("intermediary").replace("%version%", version).replace("%mappingsVersion%", mappingsVersion));
+                namedURL = new URL(jsonObject1.getString("named").replace("%version%", version).replace("%mappingsVersion%", mappingsVersion));
 
-        try {
-            intermediaryURL = new URL(Objects.requireNonNull(mappingURLs.getLeft()));
-            namedURL = new URL(Objects.requireNonNull(mappingURLs.getRight()));
-        } catch (MalformedURLException e) {
-            // TODO log or wrap exception. IllegalStateException or Error should do fine.
-            e.printStackTrace();
-            return;
+                if (Util.isValid(intermediaryURL) && Util.isValid(namedURL)) {
+                    found = true;
+                    break;
+                }
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (!found) {
+            throw new NoSuchMappingsException(version + "-" + mappingsVersion);
         }
 
         try {
-            String intermediaryFileBase = intermediaryURL.getFile().substring(intermediaryURL.getFile().lastIndexOf("/")).substring(1).replace(".jar", "");
-            String namedFileBase = namedURL.getFile().substring(namedURL.getFile().lastIndexOf("/")).substring(1).replace(".jar", "");
+            String intermediaryFileBase = intermediaryURL.getFile().substring(intermediaryURL.getFile().lastIndexOf("/")).substring(1).replace(".jar", "") + "-" + mappingsVersion;
+            String namedFileBase = namedURL.getFile().substring(namedURL.getFile().lastIndexOf("/")).substring(1).replace(".jar", "") + "-" + mappingsVersion;
 
             File intermediaryMappings = new File(temp, intermediaryFileBase + ".tiny");
             File namedMappings = new File(temp, namedFileBase + ".tiny");
@@ -238,6 +247,11 @@ public class YarnMappingsProvider implements IMappingsProvider {
     @Override
     public String getVersion() {
         return this.version;
+    }
+
+    @Override
+    public String getMappingsVersion() {
+        return this.mappingsVersion;
     }
 
     @Override

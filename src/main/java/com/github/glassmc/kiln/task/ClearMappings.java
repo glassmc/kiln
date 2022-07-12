@@ -14,7 +14,8 @@ public abstract class ClearMappings extends DefaultTask {
     public void run() {
         this.setGroup("kiln");
 
-        IMappingsProvider[] mappingsProviders = new IMappingsProvider[] { new MCPMappingsProvider(), new MojangMappingsProvider(), new YarnMappingsProvider() };
+        KilnPlugin kilnPlugin = this.getProject().getPlugins().getPlugin(KilnPlugin.class);
+        /*IMappingsProvider[] mappingsProviders = new IMappingsProvider[] { new MCPMappingsProvider(), new MojangMappingsProvider(), new YarnMappingsProvider() };
 
         File minecraftCache = new File(KilnPlugin.getMainInstance().getCache(), "minecraft");
         for (File folder : Objects.requireNonNull(minecraftCache.listFiles())) {
@@ -27,7 +28,7 @@ public abstract class ClearMappings extends DefaultTask {
             for (IMappingsProvider mappingsProvider : mappingsProviders) {
                 mappingsProvider.clearCache(folder);
             }
-        }
+        }*/
     }
 
 }

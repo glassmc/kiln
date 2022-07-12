@@ -3,9 +3,6 @@ package com.github.glassmc.kiln;
 import com.github.glassmc.kiln.mappings.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-//import org.jboss.windup.decompiler.api.DecompilationListener;
-//import org.jboss.windup.decompiler.fernflower.FernflowerDecompiler;
-//import org.jboss.windup.decompiler.util.Filter;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.objectweb.asm.ClassReader;
@@ -15,6 +12,7 @@ import com.github.glassmc.kiln.internalremapper.ClassRemapper;
 import com.github.glassmc.kiln.internalremapper.Remapper;
 
 import java.io.*;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -27,7 +25,7 @@ public class Util {
     private static JSONObject versions;
     private static final Map<String, JSONObject> versionsById = new HashMap<>();
 
-    public static void minecraft(String id, String version, String mappingsProviderId, boolean prefix, boolean runtime) {
+    public static void minecraft(String id, String version, String mappingsProviderId, String mappingsVersion, boolean runtime) {
         KilnPlugin plugin = KilnPlugin.getInstance();
         File pluginCache = plugin.getCache();
 
@@ -52,28 +50,28 @@ public class Util {
         File versionFile = new File(minecraftFile, version);
 
         try {
-            FileUtils.copyURLToFile(new URL("https://raw.githubusercontent.com/glassmc/data/main/kiln/mappings.json"), new File(pluginCache, "mappings.json"));
+            FileUtils.copyURLToFile(new URL("https://raw.githubusercontent.com/glassmc/data/new-format/kiln/mappings.json"), new File(pluginCache, "mappings.json"));
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        Util.setupMinecraft(id, version, pluginCache, new ObfuscatedMappingsProvider(), runtime);
+        Util.setupMinecraft(id, version, mappingsVersion, pluginCache, new ObfuscatedMappingsProvider(), runtime);
 
         try {
-            mappingsProvider.setup(versionFile, version);
+            mappingsProvider.setup(versionFile, version, mappingsVersion);
         } catch (NoSuchMappingsException e) {
             e.printStackTrace();
         }
 
-        Util.setupMinecraft(id, version, pluginCache, mappingsProvider, runtime);
+        Util.setupMinecraft(id, version, mappingsVersion, pluginCache, mappingsProvider, runtime);
     }
 
-    public static void setupMinecraft(String environment, String version, File pluginCache, IMappingsProvider mappingsProvider, boolean runtime) {
+    public static void setupMinecraft(String environment, String version, String mappingsVersion, File pluginCache, IMappingsProvider mappingsProvider, boolean runtime) {
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
         File versionJARFile = new File(versionFile, environment + "-" + version + ".jar");
         File localMaven = new File(minecraftFile, "localMaven");
-        File versionMappedJARFile = new File(localMaven, "net/minecraft/" + environment + "-" + version + "/" + mappingsProvider.getID() + "/" + environment + "-" + version + "-" + mappingsProvider.getID() + ".jar");
+        File versionMappedJARFile = new File(localMaven, "net/minecraft/" + environment + "-" + version + "/" + mappingsProvider.getID() + "-" + mappingsVersion + "/" + environment + "-" + version + "-" + mappingsProvider.getID() + "-" + mappingsVersion + ".jar");
 
         try {
             JSONObject versionManifest = getVersionManifest(version);
@@ -206,7 +204,7 @@ public class Util {
                 }
                 outputStream.close();
 
-                File versionPom = new File(versionMappedJARFile.getParentFile(), environment + "-" + version + "-" + mappingsProvider.getID() + ".pom");
+                File versionPom = new File(versionMappedJARFile.getParentFile(), environment + "-" + version + "-" + mappingsProvider.getID() + "-" + mappingsVersion + ".pom");
                 StringBuilder string =
                         new StringBuilder(
                                 "<project>\n" +
@@ -214,7 +212,7 @@ public class Util {
                                         "\n" +
                                         "    <groupId>net.minecraft</groupId>\n" +
                                         "    <artifactId>" + environment + "-" + version + "</artifactId>\n" +
-                                        "    <version>" + mappingsProvider.getID() + "</version>\n" +
+                                        "    <version>" + mappingsProvider.getID() + "-" + mappingsVersion + "</version>\n" +
                                         "    <dependencies>\n");
 
                 for (String[] dependency : dependencies) {
@@ -505,6 +503,17 @@ public class Util {
                 }
             }
         }
+    }
+
+    public static boolean isValid(URL url) {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) url.openConnection();
+            return connection.getResponseCode() == HttpURLConnection.HTTP_OK;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
 }

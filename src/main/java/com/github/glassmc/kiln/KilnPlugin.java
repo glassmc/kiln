@@ -76,15 +76,14 @@ public class KilnPlugin implements Plugin<Project> {
                         String version = dependency.getName().substring(splitPoint + 1);
 
                         String mappings = dependency.getVersion();
-                        boolean prefix = true;
+                        String mappingsVersion = null;
                         if (dependency.getVersion().contains("-")) {
                             String[] versionSplit = dependency.getVersion().split("-");
                             mappings = versionSplit[0];
-                            prefix = versionSplit[1].equals("prefix");
+                            mappingsVersion = versionSplit[1];
                         }
 
-
-                        Util.minecraft(environment, version, mappings, prefix, false);
+                        Util.minecraft(environment, version, mappings, mappingsVersion, false);
                     }
                 }
             }

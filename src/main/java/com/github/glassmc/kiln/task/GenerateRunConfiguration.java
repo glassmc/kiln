@@ -1,9 +1,11 @@
 package com.github.glassmc.kiln.task;
 
+import com.github.glassmc.kiln.Pair;
 import com.github.glassmc.kiln.Util;
 import com.github.glassmc.kiln.KilnPlugin;
 import com.github.glassmc.kiln.KilnExtension;
 import com.github.glassmc.kiln.environment.Environment;
+import com.github.glassmc.kiln.mappings.IMappingsProvider;
 import com.github.glassmc.kiln.mappings.ObfuscatedMappingsProvider;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
@@ -27,12 +29,19 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         String environment = argumentsSplit[1];
         String version = argumentsSplit[2];
 
+        IMappingsProvider mappingsProvider = null;
+        for (Pair<IMappingsProvider, Boolean> mappingsProviderPair : KilnPlugin.getMainInstance().getAllMappingsProviders()) {
+            if (mappingsProviderPair.getLeft().getVersion().equals(version)) {
+                mappingsProvider = mappingsProviderPair.getLeft();
+            }
+        }
+
         switch (ide) {
             case "idea":
-                generateIntelliJRunConfiguration(environment, version);
+                generateIntelliJRunConfiguration(environment, version, mappingsProvider.getMappingsVersion());
                 break;
             case "eclipse":
-                generateEclipseRunConfiguration(environment, version);
+                generateEclipseRunConfiguration(environment, version, mappingsProvider.getMappingsVersion());
         }
     }
 
@@ -70,14 +79,14 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         }
     }
 
-    private void generateIntelliJRunConfiguration(String environment, String version) {
+    private void generateIntelliJRunConfiguration(String environment, String version, String mappingsVersion) {
         File runConfigurationsFile = new File(this.getProject().getRootDir(), ".idea/runConfigurations");
         if (!runConfigurationsFile.exists()) {
             runConfigurationsFile.mkdirs();
         }
 
         File pluginCache = KilnPlugin.getMainInstance().getCache();
-        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider(), true);
+        Util.setupMinecraft(environment, version, mappingsVersion, pluginCache, new ObfuscatedMappingsProvider(), true);
         File versionFile = new File(pluginCache, "minecraft/" + version);
         File natives = new File(versionFile, "natives");
 
@@ -138,9 +147,9 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
         run.mkdirs();
     }
 
-    private void generateEclipseRunConfiguration(String environment, String version) {
+    private void generateEclipseRunConfiguration(String environment, String version, String mappingsVersion) {
         File pluginCache = KilnPlugin.getMainInstance().getCache();
-        Util.setupMinecraft(environment, version, pluginCache, new ObfuscatedMappingsProvider(), true);
+        Util.setupMinecraft(environment, version, mappingsVersion, pluginCache, new ObfuscatedMappingsProvider(), true);
         File versionFile = new File(pluginCache, "minecraft/" + version);
         File natives = new File(versionFile, "natives");
 

@@ -8,12 +8,13 @@ import java.util.List;
 import java.util.Map;
 
 public interface IMappingsProvider {
-    void setup(File minecraftFile, String version) throws NoSuchMappingsException;
+    void setup(File minecraftFile, String version, String mappingsVersion) throws NoSuchMappingsException;
     Remapper getRemapper(Direction direction);
 
     Map<String, Pair<Map<String, String>, List<String>>> getContext(Side side, boolean prefix);
     String getID();
     String getVersion();
+    String getMappingsVersion();
     void clearCache(File minecraftFile);
 
     enum Direction {

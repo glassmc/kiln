@@ -29,7 +29,7 @@ public class MojangMappingsProvider implements IMappingsProvider {
     private Map<String, List<String>> parentClasses;
 
     @Override
-    public void setup(File minecraftFile, String version) throws NoSuchMappingsException {
+    public void setup(File minecraftFile, String version, String mappingsVersion) throws NoSuchMappingsException {
         try {
             this.version = version;
 
@@ -188,6 +188,11 @@ public class MojangMappingsProvider implements IMappingsProvider {
     @Override
     public String getVersion() {
         return version;
+    }
+
+    @Override
+    public String getMappingsVersion() {
+        return null;
     }
 
     @Override
