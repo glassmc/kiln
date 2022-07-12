@@ -22,6 +22,7 @@ import com.github.glassmc.kiln.standard.internalremapper.Remapper;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -57,9 +58,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
         this.setupShadowPlugin();
 
-        project.getRepositories().maven(action -> {
-            action.setUrl(new File(this.getCache(), "minecraft/localMaven"));
-        });
+        project.getRepositories().maven(action -> action.setUrl(new File(this.getCache(), "minecraft/localMaven")));
 
         project.afterEvaluate(p -> {
             for (Configuration configuration : project.getConfigurations()) {
@@ -86,79 +85,11 @@ public class KilnStandardPlugin implements Plugin<Project> {
             }
 
             p.getTasks().getByName("classes").doLast(new ReobfuscateAction2());
-            p.getTasks().getByName("jar").doLast(task -> {
-                File file = new File(p.getBuildDir(), "libs/" + p.getName() + "-" + p.getVersion() + ".jar");
-                if (!file.exists()) {
-                    file = new File(p.getBuildDir(), "libs/" + p.getName() + ".jar");
-                }
-
-                File file2 = new File(file.getAbsolutePath().replace(".jar", "-mapped.jar"));
-
-                try {
-                    JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(file2));
-                    JarInputStream jarInputStream = new JarInputStream(new FileInputStream(file));
-                    JarEntry jarEntry = jarInputStream.getNextJarEntry();
-                    while (jarEntry != null) {
-                        File obfFile = new File(p.getBuildDir(), "THIS SHOULD NEVER EXIST");
-                        for (String language : Objects.requireNonNull(new File(p.getBuildDir(), "classesObf").list())) {
-                            if (!obfFile.exists()) {
-                                obfFile = new File(p.getBuildDir(), "classesObf/" + language + "/main/" + jarEntry.getName());
-                            }
-                        }
-
-                        jarOutputStream.putNextEntry(new JarEntry(jarEntry.getName()));
-                        if (obfFile.exists() && jarEntry.getName().endsWith(".class")) {
-                            jarOutputStream.write(FileUtils.readFileToByteArray(obfFile));
-                        } else {
-                            jarOutputStream.write(IOUtils.toByteArray(jarInputStream));
-                        }
-                        jarOutputStream.closeEntry();
-
-                        jarEntry = jarInputStream.getNextJarEntry();
-                    }
-                    jarOutputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
+            p.getTasks().getByName("jar").doLast(new MapJar());
 
             Task shadowJar = p.getTasks().findByName("shadowJar");
             if (shadowJar != null) {
-                shadowJar.doLast(task -> {
-                    File file = new File(p.getBuildDir(), "libs/" + p.getName() + "-" + p.getVersion() + "-all.jar");
-                    if (!file.exists()) {
-                        file = new File(p.getBuildDir(), "libs/" + p.getName() + "-all.jar");
-                    }
-
-                    File file2 = new File(file.getAbsolutePath().replace(".jar", "-mapped.jar"));
-
-                    try {
-                        JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(file2));
-                        JarInputStream jarInputStream = new JarInputStream(new FileInputStream(file));
-                        JarEntry jarEntry = jarInputStream.getNextJarEntry();
-                        while (jarEntry != null) {
-                            File obfFile = new File(p.getBuildDir(), "THIS SHOULD NEVER EXIST");
-                            for (String language : Objects.requireNonNull(new File(p.getBuildDir(), "classesObf").list())) {
-                                if (!obfFile.exists()) {
-                                    obfFile = new File(p.getBuildDir(), "classesObf/" + language + "/main/" + jarEntry.getName());
-                                }
-                            }
-
-                            jarOutputStream.putNextEntry(new JarEntry(jarEntry.getName()));
-                            if (obfFile.exists() && jarEntry.getName().endsWith(".class")) {
-                                jarOutputStream.write(FileUtils.readFileToByteArray(obfFile));
-                            } else {
-                                jarOutputStream.write(IOUtils.toByteArray(jarInputStream));
-                            }
-                            jarOutputStream.closeEntry();
-
-                            jarEntry = jarInputStream.getNextJarEntry();
-                        }
-                        jarOutputStream.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                });
+                shadowJar.doLast(new MapShadowJar());
             }
         });
 
@@ -166,31 +97,10 @@ public class KilnStandardPlugin implements Plugin<Project> {
             project.getRootProject().getTasks().getByName("classes").dependsOn(project.getTasks().getByName("classes"));
 
             // why this fixes a bug? who knows
-            TaskDependency taskDependency = project.getTasks().getByName("compileJava").getTaskDependencies();
-            taskDependency.getDependencies(project.getTasks().getByName("compileJava"));
+            //TaskDependency taskDependency = project.getTasks().getByName("compileJava").getTaskDependencies();
+            //taskDependency.getDependencies(project.getTasks().getByName("compileJava"));
 
             project.getRootProject().getTasks().getByName("shadowJar").dependsOn(project.getTasks().getByName("shadowJar"));
-        }
-
-        if (project.getRootProject() != project && project.getBuildFile().exists()) {
-            String displayName = project.getDisplayName();
-            project.getRootProject().getDependencies().add("runtimeOnly", project.getRootProject().project(displayName.substring(displayName.indexOf("'") + 1, displayName.lastIndexOf("'"))));
-            File file;
-            if (!((String) project.getVersion()).isEmpty()) {
-                file = new File(project.getBuildDir(), "libs/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar");
-            } else {
-                file = new File(project.getBuildDir(), "libs/" + project.getName() + "-all-mapped.jar");
-            }
-            project.getRootProject().getDependencies().add("shadowOnly", project.getRootProject().files(file));
-            if (!file.exists()) {
-                try {
-                    file.getParentFile().mkdirs();
-                    JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(file));
-                    jarOutputStream.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
         }
 
         project.afterEvaluate(project1 -> {
@@ -214,6 +124,88 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 });
             }
         });
+    }
+
+    public static class MapJar implements Action<Task> {
+
+        @Override
+        public void execute(Task task) {
+            Project p = task.getProject();
+            File file = new File(p.getBuildDir(), "libs/" + p.getName() + "-" + p.getVersion() + ".jar");
+            if (!file.exists()) {
+                file = new File(p.getBuildDir(), "libs/" + p.getName() + ".jar");
+            }
+
+            File file2 = new File(file.getAbsolutePath().replace(".jar", "-mapped.jar"));
+
+            try {
+                JarOutputStream jarOutputStream = new JarOutputStream(Files.newOutputStream(file2.toPath()));
+                JarInputStream jarInputStream = new JarInputStream(Files.newInputStream(file.toPath()));
+                JarEntry jarEntry = jarInputStream.getNextJarEntry();
+                while (jarEntry != null) {
+                    File obfFile = new File(p.getBuildDir(), "THIS SHOULD NEVER EXIST");
+                    for (String language : Objects.requireNonNull(new File(p.getBuildDir(), "classesObf").list())) {
+                        if (!obfFile.exists()) {
+                            obfFile = new File(p.getBuildDir(), "classesObf/" + language + "/main/" + jarEntry.getName());
+                        }
+                    }
+
+                    jarOutputStream.putNextEntry(new JarEntry(jarEntry.getName()));
+                    if (obfFile.exists() && jarEntry.getName().endsWith(".class")) {
+                        jarOutputStream.write(FileUtils.readFileToByteArray(obfFile));
+                    } else {
+                        jarOutputStream.write(IOUtils.toByteArray(jarInputStream));
+                    }
+                    jarOutputStream.closeEntry();
+
+                    jarEntry = jarInputStream.getNextJarEntry();
+                }
+                jarOutputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    public static class MapShadowJar implements Action<Task> {
+        @Override
+        public void execute(Task task) {
+            Project p = task.getProject();
+            File file = new File(p.getBuildDir(), "libs/" + p.getName() + "-" + p.getVersion() + "-all.jar");
+            if (!file.exists()) {
+                file = new File(p.getBuildDir(), "libs/" + p.getName() + "-all.jar");
+            }
+
+            File file2 = new File(file.getAbsolutePath().replace(".jar", "-mapped.jar"));
+
+            try {
+                JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(file2));
+                JarInputStream jarInputStream = new JarInputStream(new FileInputStream(file));
+                JarEntry jarEntry = jarInputStream.getNextJarEntry();
+                while (jarEntry != null) {
+                    File obfFile = new File(p.getBuildDir(), "THIS SHOULD NEVER EXIST");
+                    for (String language : Objects.requireNonNull(new File(p.getBuildDir(), "classesObf").list())) {
+                        if (!obfFile.exists()) {
+                            obfFile = new File(p.getBuildDir(), "classesObf/" + language + "/main/" + jarEntry.getName());
+                        }
+                    }
+
+                    jarOutputStream.putNextEntry(new JarEntry(jarEntry.getName()));
+                    if (obfFile.exists() && jarEntry.getName().endsWith(".class")) {
+                        jarOutputStream.write(FileUtils.readFileToByteArray(obfFile));
+                    } else {
+                        jarOutputStream.write(IOUtils.toByteArray(jarInputStream));
+                    }
+                    jarOutputStream.closeEntry();
+
+                    jarEntry = jarInputStream.getNextJarEntry();
+                }
+                jarOutputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void setupShadowPlugin() {
@@ -342,19 +334,6 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
             System.out.println("Finished setup in " + (System.currentTimeMillis() - startTime) + " milliseconds.");
 
-            Remapper versionRemover = new Remapper() {
-
-                @Override
-                public String map(String name) {
-                    if (name.startsWith("v")) {
-                        return name.substring(name.indexOf("/") + 1);
-                    } else {
-                        return name;
-                    }
-                }
-
-            };
-
             Map<String, List<String>> classesMap = new HashMap<>();
 
             Remapper collectiveRemapper = new Remapper() {
@@ -460,7 +439,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                         for (String classString : parents) {
                             for (Pair<IMappingsProvider, Pair<Boolean, Remapper>> remapper : remappers) {
                                 if (!remapper.getRight().getLeft() || remapper.getLeft().getVersion().equals(nameVersion)) {
-                                    newName = remapper.getRight().getRight().mapMethodName(classString, newName, versionRemover.mapDesc(descriptor));
+                                    newName = remapper.getRight().getRight().mapMethodName(classString, newName, descriptor);
                                     done = true;
                                 }
 
@@ -599,7 +578,6 @@ public class KilnStandardPlugin implements Plugin<Project> {
 
             Map<String, Pair<Map<String, String>, List<String>>> context = new HashMap<>();
             for (Pair<IMappingsProvider, Boolean> mappingsProvider : mappingsProviders) {
-                System.out.println(mappingsProvider);
                 context.putAll(mappingsProvider.getLeft().getContext(IMappingsProvider.Side.NAMED, mappingsProvider.getRight()));
             }
 
@@ -610,7 +588,7 @@ public class KilnStandardPlugin implements Plugin<Project> {
                 customTransformer.getRight().setContext(context);
 
                 customTransformer.getRight().map(new ArrayList<>(classNodes.values()), new HashMap<>(classNodesModified));
-                System.out.println(customTransformer.getRight() + " done in " + (System.currentTimeMillis() - remapTime) + " milliseconds.");
+                System.out.println(customTransformer.getRight().getClass().getSimpleName() + " done in " + (System.currentTimeMillis() - remapTime) + " milliseconds.");
             }
 
             System.out.println("Remapping and outputting.");

@@ -6,13 +6,22 @@ import com.github.glassmc.kiln.main.task.GenerateRunConfiguration;
 import com.github.glassmc.kiln.standard.KilnStandardPlugin;
 import com.github.glassmc.kiln.standard.mappings.IMappingsProvider;
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar;
+import org.apache.commons.io.IOUtils;
+import org.gradle.api.Action;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.jvm.tasks.Jar;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.jar.JarOutputStream;
 
 public class KilnMainPlugin implements Plugin<Project> {
 
@@ -24,7 +33,7 @@ public class KilnMainPlugin implements Plugin<Project> {
 
     protected Project project;
 
-    private List<Pair<IMappingsProvider, Boolean>> allMappingsProviders = new ArrayList<>();
+    private final List<Pair<IMappingsProvider, Boolean>> allMappingsProviders = new ArrayList<>();
 
     @Override
     public void apply(Project project) {
@@ -37,6 +46,11 @@ public class KilnMainPlugin implements Plugin<Project> {
         project.getTasks().register("clearMappings", ClearMappings.class);
 
         this.setupShadow();
+
+        Task shadowJar = project.getTasks().findByName("shadowJar");
+        if (shadowJar != null) {
+            shadowJar.doLast(new FullBuiltJar());
+        }
     }
 
     private void setupShadow() {
@@ -58,6 +72,71 @@ public class KilnMainPlugin implements Plugin<Project> {
 
     public List<Pair<IMappingsProvider, Boolean>> getAllMappingsProviders() {
         return allMappingsProviders;
+    }
+
+    public class FullBuiltJar implements Action<Task> {
+
+        @Override
+        public void execute(Task task) {
+            Project project = task.getProject();
+            File libs = new File(task.getProject().getBuildDir(), "libs");
+
+            File allMapped = new File(libs + "/" + project.getName() + "-" + project.getVersion() + "-all-mapped.jar");
+            if (!allMapped.exists()) {
+                allMapped = new File(libs + "/" + project.getName() + "-all-mapped.jar");
+            }
+
+            List<Project> projects = new ArrayList<>();
+            appendAllProjects(project, projects);
+
+            List<File> filesToAppend = new ArrayList<>();
+            for (Project project1 : projects) {
+                File libs1 = new File(project1.getBuildDir(), "libs");
+                File allMapped1 = new File(libs1 + "/" + project1.getName() + "-" + project1.getVersion() + "-all-mapped.jar");
+                if (!allMapped1.exists()) {
+                    allMapped1 = new File(libs1 + "/" + project1.getName() + "-all-mapped.jar");
+                }
+
+                filesToAppend.add(allMapped1);
+            }
+
+            List<String> alreadyAdded = new ArrayList<>();
+            try {
+                JarOutputStream jarOutputStream = new JarOutputStream(Files.newOutputStream(new File(allMapped.getAbsolutePath().replace("-all-mapped.jar", "-all-all-mapped.jar")).toPath()));
+
+                for (File file : filesToAppend) {
+                    JarFile jarFile = new JarFile(file);
+                    Enumeration<JarEntry> entries = jarFile.entries();
+
+                    while (entries.hasMoreElements()) {
+                        JarEntry jarEntry = entries.nextElement();
+
+                        if (!alreadyAdded.contains(jarEntry.getName())) {
+                            jarOutputStream.putNextEntry(new JarEntry(jarEntry.getName()));
+                            jarOutputStream.write(IOUtils.toByteArray(jarFile.getInputStream(jarEntry)));
+                            jarOutputStream.closeEntry();
+
+                            alreadyAdded.add(jarEntry.getName());
+                        }
+                    }
+                }
+
+                jarOutputStream.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+    }
+
+    public void appendAllProjects(Project parent, List<Project> projects) {
+        if (parent.getBuildFile().exists() && !parent.getDisplayName().contains("launch")) {
+            projects.add(parent);
+        }
+
+        for (Project project1 : parent.getChildProjects().values()) {
+            appendAllProjects(project1, projects);
+        }
     }
 
 }
