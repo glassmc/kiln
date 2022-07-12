@@ -3,6 +3,11 @@ package com.github.glassmc.kiln;
 import com.github.glassmc.kiln.mappings.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.jboss.windup.decompiler.api.DecompilationListener;
+import org.jetbrains.java.decompiler.main.DecompilerContext;
+import org.jetbrains.java.decompiler.main.extern.IBytecodeProvider;
+import org.jetbrains.java.decompiler.main.extern.IFernflowerLogger;
+import org.jetbrains.java.decompiler.main.extern.IResultSaver;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.objectweb.asm.ClassReader;
@@ -15,10 +20,20 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 public class Util {
 
@@ -180,7 +195,7 @@ public class Util {
                 };
 
                 versionMappedJARFile.getParentFile().mkdirs();
-                JarOutputStream outputStream = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(versionMappedJARFile)));
+                JarOutputStream outputStream = new JarOutputStream(new BufferedOutputStream(Files.newOutputStream(versionMappedJARFile.toPath())));
 
                 Enumeration<JarEntry> entries = input.entries();
                 while(entries.hasMoreElements()) {
@@ -203,6 +218,40 @@ public class Util {
                     }
                 }
                 outputStream.close();
+
+                FernflowerDecompiler fernflowerDecompiler = new FernflowerDecompiler();
+                DecompilationListener decompilationListener = new DecompilationListener() {
+                    @Override
+                    public void fileDecompiled(List<String> sourceClassPaths, String outputPath) {
+
+                    }
+
+                    @Override
+                    public void decompilationFailed(List<String> sourceClassPaths, String message) {
+
+                    }
+
+                    @Override
+                    public void decompilationProcessComplete() {
+
+                    }
+
+                    @Override
+                    public boolean isCancelled() {
+                        return false;
+                    }
+                };
+
+                File output = new File(versionMappedJARFile.getAbsolutePath().replace(".jar", ""));
+                output.mkdirs();
+
+                /*try {
+                    fernflowerDecompiler.decompileArchive(versionMappedJARFile.toPath(), output.toPath(), decompilationListener);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                pack(output.toPath(), new File(output.getAbsolutePath() + "-sources.jar").toPath());*/
 
                 File versionPom = new File(versionMappedJARFile.getParentFile(), environment + "-" + version + "-" + mappingsProvider.getID() + "-" + mappingsVersion + ".pom");
                 StringBuilder string =
@@ -235,6 +284,28 @@ public class Util {
         }
     }
 
+    public static void pack(final Path folder, final Path zipFilePath) throws IOException {
+        try (
+                FileOutputStream fos = new FileOutputStream(zipFilePath.toFile());
+                ZipOutputStream zos = new ZipOutputStream(fos)
+        ) {
+            Files.walkFileTree(folder, new SimpleFileVisitor<Path>() {
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    zos.putNextEntry(new ZipEntry(folder.relativize(file).toString()));
+                    Files.copy(file, zos);
+                    zos.closeEntry();
+                    return FileVisitResult.CONTINUE;
+                }
+
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                    zos.putNextEntry(new ZipEntry(folder.relativize(dir).toString() + "/"));
+                    zos.closeEntry();
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        }
+    }
+
     private static void mapLibraries(JSONObject versionManifest, File versionLibraries, File localMaven, String version) throws IOException {
         Map<String, String> libraries = new HashMap<>();
 
@@ -256,8 +327,8 @@ public class Util {
 
             String[] id = libraries.get(library.getName()).split(":");
             File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + "/" + id[2] + (id.length > 3 ? "-" + id[3] : "") + "/" + id[1] + "-" + version + "-" + id[2] + (id.length > 3 ? "-" + id[3] : "") + ".jar");
-            System.out.println(library.getAbsolutePath());
-            System.out.println(file.getAbsolutePath());
+            //System.out.println(library.getAbsolutePath());
+            //System.out.println(file.getAbsolutePath());
             file.getParentFile().mkdirs();
 
             FileUtils.copyFile(library, file);
@@ -530,9 +601,8 @@ public class Util {
     }
 
     public static boolean isValid(URL url) {
-        HttpURLConnection connection = null;
         try {
-            connection = (HttpURLConnection) url.openConnection();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             return connection.getResponseCode() == HttpURLConnection.HTTP_OK;
         } catch (IOException e) {
             e.printStackTrace();

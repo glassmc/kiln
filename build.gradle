@@ -27,6 +27,7 @@ dependencies {
 
     implementation 'com.github.fabricmc:tiny-mappings-parser:750be4e739'
     implementation 'org.apache.commons:commons-csv:1.9.0'
+    implementation 'org.jboss.windup.decompiler:decompiler-fernflower:5.3.0.Final'
 }
 
 publishing {
@@ -39,4 +40,8 @@ publishing {
             from components.java
         }
     }
+}
+
+java {
+    withSourcesJar()
 }
