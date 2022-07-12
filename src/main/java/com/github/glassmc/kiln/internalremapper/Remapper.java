@@ -132,7 +132,7 @@ public abstract class Remapper {
             }
             String descriptor = constantDynamic.getDescriptor();
             return new ConstantDynamic(
-                    mapInvokeDynamicMethodName(constantDynamic.getName(), descriptor),
+                    mapInvokeDynamicMethodName("", constantDynamic.getName(), descriptor),
                     mapDesc(descriptor),
                     (Handle) mapValue(constantDynamic.getBootstrapMethod()),
                     remappedBootstrapMethodArguments);
@@ -181,8 +181,9 @@ public abstract class Remapper {
         return name;
     }
 
-    public String mapInvokeDynamicMethodName(final String name, final String descriptor) {
-        return name;
+    public String mapInvokeDynamicMethodName(final String className, final String name, final String descriptor) {
+        //System.out.println(className + " " + name + " " + descriptor + " " + this.mapMethodName(className, name, descriptor));
+        return this.mapMethodName(className, name, descriptor);
     }
 
     public String mapRecordComponentName(final String owner, final String name, final String descriptor) {

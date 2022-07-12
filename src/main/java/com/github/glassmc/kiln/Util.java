@@ -255,15 +255,18 @@ public class Util {
             if (!library.getName().endsWith(".jar")) continue;
 
             String[] id = libraries.get(library.getName()).split(":");
-            File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + "/" + id[2] + "/" + id[1] + "-" + version + "-" + id[2] + ".jar");
+            File file = new File(localMaven, id[0].replace(".", "/") + "/" + id[1] + "-" + version + "/" + id[2] + (id.length > 3 ? "-" + id[3] : "") + "/" + id[1] + "-" + version + "-" + id[2] + (id.length > 3 ? "-" + id[3] : "") + ".jar");
+            System.out.println(library.getAbsolutePath());
+            System.out.println(file.getAbsolutePath());
             file.getParentFile().mkdirs();
 
-            JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(file));
+            FileUtils.copyFile(library, file);
+            //JarOutputStream jarOutputStream = new JarOutputStream(Files.newOutputStream(file.toPath()));
 
-            JarFile jarFile = new JarFile(library);
-            Enumeration<JarEntry> entries = jarFile.entries();
+            //JarFile jarFile = new JarFile(library);
+            //Enumeration<JarEntry> entries = jarFile.entries();
 
-            while (entries.hasMoreElements()) {
+            /*while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
                 if (entry.getName().endsWith(".class")) {
                     jarOutputStream.putNextEntry(new JarEntry(entry.getName().replace(".class", "") + ".class"));
@@ -277,7 +280,7 @@ public class Util {
                 }
             }
 
-            jarOutputStream.close();
+            jarOutputStream.close();*/
 
             File versionPom = new File(file.getParentFile(), file.getName().replace(".jar", ".pom"));
             FileUtils.writeStringToFile(versionPom, "<project>\n" +
@@ -418,8 +421,9 @@ public class Util {
     private static void downloadNatives(JSONObject versionManifest, File versionNatives) throws IOException {
         for(Object element : versionManifest.getJSONArray("libraries")) {
             JSONObject library = (JSONObject) element;
+            String name = library.getString("name");
 
-            if(library.has("natives")) {
+            if(library.has("natives") || name.contains("natives-")) {
                 boolean allowed = true;
                 if (library.has("rules")) {
                     allowed = false;
@@ -477,27 +481,47 @@ public class Util {
                             break;
                     }
 
-                    JSONObject natives = library.getJSONObject("natives");
-                    if(!natives.has(osName)) {
-                        continue;
-                    }
+                    if (library.has("natives")) {
+                        JSONObject natives = library.getJSONObject("natives");
+                        if(!natives.has(osName)) {
+                            continue;
+                        }
 
-                    String nativesType = natives.getString(osName).replace("${arch}", String.valueOf(osArch));
-                    JSONObject classifiers = library.getJSONObject("downloads").getJSONObject("classifiers");
-                    if(!classifiers.has(nativesType)) {
-                        continue;
-                    }
+                        String nativesType = natives.getString(osName).replace("${arch}", String.valueOf(osArch));
+                        JSONObject classifiers = library.getJSONObject("downloads").getJSONObject("classifiers");
+                        if(!classifiers.has(nativesType)) {
+                            continue;
+                        }
 
-                    String url = classifiers.getJSONObject(nativesType).getString("url");
-                    File downloadedJarFile = new File(versionNatives, library.getString("name").replace(":", ";") + ".jar");
-                    FileUtils.copyURLToFile(new URL(url), downloadedJarFile);
+                        String url = classifiers.getJSONObject(nativesType).getString("url");
+                        File downloadedJarFile = new File(versionNatives, library.getString("name").replace(":", ";") + ".jar");
+                        FileUtils.copyURLToFile(new URL(url), downloadedJarFile);
 
-                    JarFile jarFile = new JarFile(downloadedJarFile);
-                    Enumeration<JarEntry> entries = jarFile.entries();
-                    while(entries.hasMoreElements()) {
-                        JarEntry entry = entries.nextElement();
-                        if(!entry.getName().contains("/")) {
-                            FileUtils.copyInputStreamToFile(jarFile.getInputStream(entry), new File(versionNatives, entry.getName()));
+                        JarFile jarFile = new JarFile(downloadedJarFile);
+                        Enumeration<JarEntry> entries = jarFile.entries();
+                        while(entries.hasMoreElements()) {
+                            JarEntry entry = entries.nextElement();
+                            if(!entry.getName().contains("/")) {
+                                FileUtils.copyInputStreamToFile(jarFile.getInputStream(entry), new File(versionNatives, entry.getName()));
+                            }
+                        }
+                    } else {
+                        JSONObject downloads = library.getJSONObject("downloads");
+                        String url = downloads.getJSONObject("artifact").getString("url");
+                        File downloadedJarFile = new File(versionNatives, library.getString("name").replace(":", ";") + ".jar");
+                        FileUtils.copyURLToFile(new URL(url), downloadedJarFile);
+
+                        JarFile jarFile = new JarFile(downloadedJarFile);
+                        Enumeration<JarEntry> entries = jarFile.entries();
+                        while(entries.hasMoreElements()) {
+                            JarEntry entry = entries.nextElement();
+                            if (entry.getName().endsWith(".so") || entry.getName().endsWith(".dylib") || entry.getName().endsWith(".dll")) {
+                                String shortenedName = entry.getName();
+                                if (shortenedName.contains("/")) {
+                                    shortenedName = shortenedName.substring(shortenedName.lastIndexOf("/") + 1);
+                                }
+                                FileUtils.copyInputStreamToFile(jarFile.getInputStream(entry), new File(versionNatives, shortenedName));
+                            }
                         }
                     }
                 }

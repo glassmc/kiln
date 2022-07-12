@@ -79,7 +79,7 @@ public class KilnLaunchPlugin implements Plugin<Project> {
                     }
                 }
 
-                File versionMappedJARFile = new File(localMaven, "net/minecraft/" + extension.environment + "-" + extension.version + "/" + mappingsProvider.getID() + "/" + extension.environment + "-" + extension.version + "-" + mappingsProvider.getID() + ".jar");
+                File versionMappedJARFile = new File(localMaven, "net/minecraft/" + extension.environment + "-" + extension.version + "/" + mappingsProvider.getID() + "-" + mappingsProvider.getMappingsVersion() + "/" + extension.environment + "-" + extension.version + "-" + mappingsProvider.getID() + "-" + mappingsProvider.getMappingsVersion() + ".jar");
                 project.getDependencies().add("runtimeOnly", project.files(versionMappedJARFile.getAbsolutePath()));
 
                 for(File dependency : Objects.requireNonNull(dependencies.listFiles())) {

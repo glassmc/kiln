@@ -28,12 +28,7 @@
 
 package com.github.glassmc.kiln.internalremapper;
 
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.Handle;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.TypePath;
+import org.objectweb.asm.*;
 
 public class MethodRemapper extends MethodVisitor {
 
@@ -141,8 +136,15 @@ public class MethodRemapper extends MethodVisitor {
         for (int i = 0; i < bootstrapMethodArguments.length; ++i) {
             remappedBootstrapMethodArguments[i] = remapper.mapValue(bootstrapMethodArguments[i]);
         }
+        String descriptor1;
+        if (bootstrapMethodArguments[0] instanceof Type) {
+            descriptor1 = ((Type) bootstrapMethodArguments[0]).getDescriptor();
+        } else {
+            descriptor1 = (String) bootstrapMethodArguments[0];
+        }
+
         super.visitInvokeDynamicInsn(
-                remapper.mapInvokeDynamicMethodName(name, descriptor),
+                remapper.mapInvokeDynamicMethodName(Type.getMethodType(descriptor).getReturnType().getClassName(), name, descriptor1),
                 remapper.mapMethodDesc(descriptor),
                 (Handle) remapper.mapValue(bootstrapMethodHandle),
                 remappedBootstrapMethodArguments);
