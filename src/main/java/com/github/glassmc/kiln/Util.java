@@ -245,13 +245,25 @@ public class Util {
                 File output = new File(versionMappedJARFile.getAbsolutePath().replace(".jar", ""));
                 output.mkdirs();
 
-                /*try {
+                try {
                     fernflowerDecompiler.decompileArchive(versionMappedJARFile.toPath(), output.toPath(), decompilationListener);
+
+                    JarFile jarFile = new JarFile(versionMappedJARFile);
+                    Enumeration<JarEntry> entries1 = jarFile.entries();
+                    while (entries1.hasMoreElements()) {
+                        JarEntry entry = entries1.nextElement();
+
+                        if (!entry.getName().endsWith(".class")) {
+                            File file = new File(output, entry.getName());
+                            file.getParentFile().mkdirs();
+                            FileUtils.writeByteArrayToFile(file, IOUtils.toByteArray(jarFile.getInputStream(entry)));
+                        }
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
 
-                pack(output.toPath(), new File(output.getAbsolutePath() + "-sources.jar").toPath());*/
+                pack(output.toPath(), new File(output.getAbsolutePath() + "-sources.jar").toPath());
 
                 File versionPom = new File(versionMappedJARFile.getParentFile(), environment + "-" + version + "-" + mappingsProvider.getID() + "-" + mappingsVersion + ".pom");
                 StringBuilder string =
@@ -271,6 +283,95 @@ public class Util {
                 string.append("    </dependencies>\n" + "</project>\n");
 
                 FileUtils.writeStringToFile(versionPom, string.toString(), StandardCharsets.UTF_8);
+
+                File versionModule = new File(versionMappedJARFile.getParentFile(), environment + "-" + version + "-" + mappingsProvider.getID() + "-" + mappingsVersion + ".module");
+                string = new StringBuilder("{\n" +
+                        "  \"formatVersion\": \"1.1\",\n" +
+                        "  \"component\": {\n" +
+                        "    \"group\": \"net.minecraft\",\n" +
+                        "    \"module\": \"" + environment + "-" + version + "\",\n" +
+                        "    \"version\": \"" + mappingsProvider.getID() + "-" + mappingsVersion + "\",\n" +
+                        "    \"attributes\": {\n" +
+                        "      \"org.gradle.status\": \"release\"\n" +
+                        "    }\n" +
+                        "  },\n" +
+                        "  \"createdBy\": {\n" +
+                        "    \"gradle\": {\n" +
+                        "      \"version\": \"7.4.2\"\n" +
+                        "    }\n" +
+                        "  },\n" +
+                        "  \"variants\": [\n" +
+                        "    {\n" +
+                        "      \"name\": \"apiElements\",\n" +
+                        "      \"attributes\": {\n" +
+                        "        \"org.gradle.category\": \"library\",\n" +
+                        "        \"org.gradle.dependency.bundling\": \"external\",\n" +
+                        "        \"org.gradle.jvm.version\": 8,\n" + //TODO: fix for places where this isnt 8
+                        "        \"org.gradle.libraryelements\": \"jar\",\n" +
+                        "        \"org.gradle.usage\": \"java-api\"\n" +
+                        "      },\n" +
+                        "      \"files\": [\n" +
+                        "        {\n" +
+                        "          \"name\": \"" + environment + "-" + version + "-" + mappingsProvider.getID() + "-" + mappingsVersion + ".jar\",\n" +
+                        "          \"url\": \"" + environment + "-" + version + "-" + mappingsProvider.getID() + "-" + mappingsVersion + ".jar\",\n" +
+                        "        }\n" +
+                        "      ]\n" +
+                        "    },\n" +
+                        "    {\n" +
+                        "      \"name\": \"runtimeElements\",\n" +
+                        "      \"attributes\": {\n" +
+                        "        \"org.gradle.category\": \"library\",\n" +
+                        "        \"org.gradle.dependency.bundling\": \"external\",\n" +
+                        "        \"org.gradle.jvm.version\": 8,\n" + //TODO: also fix
+                        "        \"org.gradle.libraryelements\": \"jar\",\n" +
+                        "        \"org.gradle.usage\": \"java-runtime\"\n" +
+                        "      },\n" +
+                        "      \"dependencies\": [\n");
+
+                for (String[] dependency : dependencies) {
+                    string.append("        {\n" +
+                            "          \"group\": \"" + dependency[0] + "\",\n" +
+                                    "          \"module\": \"" + dependency[1] + "-" + version + "\",\n" +
+                                    "          \"version\": {\n" +
+                                    "            \"requires\": \"" + dependency[2] + "\"\n" +
+                                    "          }\n" +
+                                    "        }");
+                    if (dependencies.indexOf(dependency) < dependencies.size() - 1) {
+                        string.append(",");
+                    }
+                    string.append("\n");
+                }
+
+                string.append(
+                        "      ],\n" +
+                        "      \"files\": [\n" +
+                        "        {\n" +
+                        "          \"name\": \"" + environment + "-" + version + "-" + mappingsProvider.getID() + "-" + mappingsVersion + ".jar\",\n" +
+                        "          \"url\": \"" + environment + "-" + version + "-" + mappingsProvider.getID() + "-" + mappingsVersion + ".jar\",\n" +
+                        "        }\n" +
+                        "      ]\n" +
+                        "    },\n" +
+                        "    {\n" +
+                        "      \"name\": \"sourcesElements\",\n" +
+                        "      \"attributes\": {\n" +
+                        "        \"org.gradle.category\": \"documentation\",\n" +
+                        "        \"org.gradle.dependency.bundling\": \"external\",\n" +
+                        "        \"org.gradle.docstype\": \"sources\",\n" +
+                        "        \"org.gradle.usage\": \"java-runtime\"\n" +
+                        "      },\n" +
+                        "      \"files\": [\n" +
+                        "        {\n" +
+                        "          \"name\": \"" + environment + "-" + version + "-" + mappingsProvider.getID() + "-" + mappingsVersion + "-sources.jar\",\n" +
+                        "          \"url\": \"" + environment + "-" + version + "-" + mappingsProvider.getID() + "-" + mappingsVersion + "-sources.jar\",\n" +
+                        "        }\n" +
+                        "      ]\n" +
+                        "    }\n" +
+                        "  ]\n" +
+                        "}\n");
+
+                FileUtils.writeStringToFile(versionModule, string.toString(), StandardCharsets.UTF_8);
+
+                FileUtils.deleteDirectory(output);
             } else if (runtime) {
                 File assets = new File(versionFile, "assets");
 
