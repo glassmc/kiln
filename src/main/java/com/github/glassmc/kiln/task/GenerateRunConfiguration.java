@@ -129,7 +129,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
                 "    <option name=\"WORKING_DIRECTORY\" value=\"run\" />\n" +
                 "    <method v=\"2\">\n" +
                 "      <option name=\"Make\" enabled=\"true\" />\n" +
-                "    </method>" +
+                "    </method>\n" +
                 "  </configuration>\n" +
                 "</component>";
 
@@ -192,6 +192,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
                 "        <listEntry value=\"4\"/>\n" +
                 "    </listAttribute>\n" +
                 "    <booleanAttribute key=\"org.eclipse.jdt.launching.ATTR_ATTR_USE_ARGFILE\" value=\"false\"/>\n" +
+                "    <booleanAttribute key=\"org.eclipse.debug.ui.ATTR_LAUNCH_IN_BACKGROUND\" value=\"false\"/>\n" +
                 "    <booleanAttribute key=\"org.eclipse.jdt.launching.ATTR_SHOW_CODEDETAILS_IN_EXCEPTION_MESSAGES\" value=\"true\"/>\n" +
                 "    <booleanAttribute key=\"org.eclipse.jdt.launching.ATTR_USE_CLASSPATH_ONLY_JAR\" value=\"false\"/>\n" +
                 "    <booleanAttribute key=\"org.eclipse.jdt.launching.ATTR_USE_START_ON_FIRST_THREAD\" value=\"true\"/>\n" +
@@ -210,25 +211,81 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
         StringBuilder classpathString = new StringBuilder();
         List<String> projects = new ArrayList<>();
+        List<Project> projects2 = new ArrayList<>();
         projects.add(environment + "-" + version.replace(".", "_"));
         projects.add(this.getProject().getName());
         for (Project project : getAllProjects(this.getProject())) {
             if (project.getParent() != null && !project.getParent().getName().equals("launch") && !project.getName().equals("launch") && project.getBuildFile().exists()) {
                 projects.add(project.getName().substring(project.getName().lastIndexOf(":") + 1));
+                projects2.add(project);
             }
         }
+
+        for (Project project : projects2) {
+            File classesObfDir = new File(project.getBuildDir(), "classesObf");
+            for (String file : Objects.requireNonNull(classesObfDir.list())) {
+                classpathString.append(
+                        String.format("        <listEntry value=\"&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&#10;&lt;runtimeClasspathEntry externalArchive=&quot;%s&quot; path=&quot;5&quot; type=&quot;2&quot;/&gt;&#10;\"/>\n", new File(classesObfDir, file + "/main"))
+                );
+            }
+        }
+
         for (String project : projects) {
             classpathString.append(String.format(
                             "        <listEntry value=\"&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&#10;&lt;runtimeClasspathEntry path=&quot;5&quot; projectName=&quot;%s&quot; type=&quot;1&quot;/&gt;&#10;\"/>\n" +
                             "        <listEntry value=\"&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&#10;&lt;runtimeClasspathEntry containerPath=&quot;org.eclipse.buildship.core.gradleclasspathcontainer&quot; javaProject=&quot;%s&quot; path=&quot;5&quot; type=&quot;4&quot;/&gt;&#10;\"/>\n", project, project));
         }
 
-        String runConfigurationData = String.format(runConfigurationTemplate, module, classpathString.toString(), mainClass, module, programArguments, vmArguments, module, module);
+        String runConfigurationData = String.format(runConfigurationTemplate, module, classpathString, mainClass, module, programArguments, vmArguments, module, module);
+
+        String runConfigurationGradleClassesTemplate = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n" +
+                "<launchConfiguration type=\"org.eclipse.buildship.core.launch.runconfiguration\">\n" +
+                "    <listAttribute key=\"arguments\"/>\n" +
+                "    <booleanAttribute key=\"build_scans_enabled\" value=\"false\"/>\n" +
+                "    <stringAttribute key=\"gradle_distribution\" value=\"GRADLE_DISTRIBUTION(WRAPPER)\"/>\n" +
+                "    <stringAttribute key=\"gradle_user_home\" value=\"\"/>\n" +
+                "    <stringAttribute key=\"java_home\" value=\"\"/>\n" +
+                "    <listAttribute key=\"jvm_arguments\"/>\n" +
+                "    <booleanAttribute key=\"offline_mode\" value=\"false\"/>\n" +
+                "    <booleanAttribute key=\"override_workspace_settings\" value=\"false\"/>\n" +
+                "    <booleanAttribute key=\"show_console_view\" value=\"true\"/>\n" +
+                "    <booleanAttribute key=\"show_execution_view\" value=\"true\"/>\n" +
+                "    <listAttribute key=\"tasks\">\n" +
+                "        <listEntry value=\"classes\"/>\n" +
+                "    </listAttribute>\n" +
+                "    <stringAttribute key=\"working_dir\" value=\"${workspace_loc:/%s}\"/>\n" +
+                "</launchConfiguration>\n";
+
+        String runConfigurationGradleClassesData = String.format(runConfigurationGradleClassesTemplate, module);
+
+        String runConfigurationGroupTemplate = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n" +
+                "<launchConfiguration type=\"org.eclipse.debug.core.groups.GroupLaunchConfigurationType\">\n" +
+                "    <stringAttribute key=\"org.eclipse.debug.core.launchGroup.0.action\" value=\"NONE\"/>\n" +
+                "    <booleanAttribute key=\"org.eclipse.debug.core.launchGroup.0.adoptIfRunning\" value=\"false\"/>\n" +
+                "    <booleanAttribute key=\"org.eclipse.debug.core.launchGroup.0.enabled\" value=\"true\"/>\n" +
+                "    <stringAttribute key=\"org.eclipse.debug.core.launchGroup.0.mode\" value=\"run\"/>\n" +
+                "    <stringAttribute key=\"org.eclipse.debug.core.launchGroup.0.name\" value=\"%s\"/>\n" +
+                "    <stringAttribute key=\"org.eclipse.debug.core.launchGroup.1.action\" value=\"NONE\"/>\n" +
+                "    <booleanAttribute key=\"org.eclipse.debug.core.launchGroup.1.adoptIfRunning\" value=\"false\"/>\n" +
+                "    <booleanAttribute key=\"org.eclipse.debug.core.launchGroup.1.enabled\" value=\"true\"/>\n" +
+                "    <stringAttribute key=\"org.eclipse.debug.core.launchGroup.1.mode\" value=\"run\"/>\n" +
+                "    <stringAttribute key=\"org.eclipse.debug.core.launchGroup.1.name\" value=\"%s\"/>\n" +
+                "</launchConfiguration>\n";
+
+        String runConfigurationGroupData = String.format(runConfigurationGroupTemplate, name.replace(" ", "_").replace(".", "_") + "2", name.replace(" ", "_").replace(".", "_"));
 
         try {
             FileWriter fileWriter = new FileWriter(name.replace(" ", "_").replace(".", "_") + ".launch");
             fileWriter.write(runConfigurationData);
             fileWriter.close();
+
+            FileWriter fileWriter1 = new FileWriter(name.replace(" ", "_").replace(".", "_") + "2.launch");
+            fileWriter1.write(runConfigurationGradleClassesData);
+            fileWriter1.close();
+
+            FileWriter fileWriter2 = new FileWriter(name.replace(" ", "_").replace(".", "_") + "3.launch");
+            fileWriter2.write(runConfigurationGroupData);
+            fileWriter2.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -11,9 +11,12 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.PublishArtifact;
 import org.gradle.api.file.RegularFile;
+import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
+import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.TaskDependency;
 import org.objectweb.asm.*;
 import com.github.glassmc.kiln.internalremapper.ClassRemapper;
 import com.github.glassmc.kiln.internalremapper.Remapper;
@@ -61,6 +64,10 @@ public class KilnPlugin implements Plugin<Project> {
         project.getTasks().getByName("compileJava").dependsOn(project.getTasks().getByName("processResources"));
         project.getPlugins().apply("com.github.johnrengelman.shadow");
 
+        JavaPluginExtension javaPluginExtension = project.getExtensions().getByType(JavaPluginExtension.class);
+        SourceSet classesObf = javaPluginExtension.getSourceSets().create("classesObf");
+        classesObf.getOutput().dir(new File(project.getBuildDir(), "classesObf/java/main").getAbsolutePath());
+
         this.setupShadowPlugin();
 
         project.getRepositories().maven(action -> action.setUrl(new File(this.getCache(), "minecraft/localMaven")));
@@ -101,8 +108,8 @@ public class KilnPlugin implements Plugin<Project> {
             project.getRootProject().getTasks().getByName("classes").dependsOn(project.getTasks().getByName("classes"));
 
             // why this fixes a bug? who knows
-            //TaskDependency taskDependency = project.getTasks().getByName("compileJava").getTaskDependencies();
-            //taskDependency.getDependencies(project.getTasks().getByName("compileJava"));
+            TaskDependency taskDependency = project.getTasks().getByName("compileJava").getTaskDependencies();
+            taskDependency.getDependencies(project.getTasks().getByName("compileJava"));
 
             project.getRootProject().getTasks().getByName("shadowJar").dependsOn(project.getTasks().getByName("shadowJar"));
         }
@@ -587,7 +594,7 @@ public class KilnPlugin implements Plugin<Project> {
                 public Object mapValue(Object value) {
                     Object newValue = value;
                     try {
-                        if(newValue instanceof String && ((String) newValue).chars().allMatch(letter -> Character.isLetterOrDigit(letter) || "#_/();$".contains(String.valueOf((char) letter)))) {
+                        if(newValue instanceof String && ((String) newValue).chars().allMatch(letter -> Character.isLetterOrDigit(letter) || "#_/();$[".contains(String.valueOf((char) letter)))) {
                             String valueString = (String) newValue;
                             if (valueString.contains("#")) {
                                 String[] classElementSplit = (valueString).split("#");
