@@ -48,7 +48,7 @@ public class KilnPlugin implements Plugin<Project> {
     private KilnExtension extension;
 
     // only stored for the plugin in root project
-    private final List<Pair<IMappingsProvider, Boolean>> allMappingsProviders = new ArrayList<>();
+    private static final List<Pair<IMappingsProvider, Boolean>> allMappingsProviders = new ArrayList<>();
     private final List<Pair<IMappingsProvider, Boolean>> mappingsProviders = new ArrayList<>();
 
     @Override
@@ -67,6 +67,7 @@ public class KilnPlugin implements Plugin<Project> {
         JavaPluginExtension javaPluginExtension = project.getExtensions().getByType(JavaPluginExtension.class);
         SourceSet classesObf = javaPluginExtension.getSourceSets().create("classesObf");
         classesObf.getOutput().dir(new File(project.getBuildDir(), "classesObf/java/main").getAbsolutePath());
+        classesObf.getOutput().setResourcesDir(new File(project.getBuildDir(), "resources/main").getAbsolutePath());
 
         this.setupShadowPlugin();
 
@@ -105,8 +106,6 @@ public class KilnPlugin implements Plugin<Project> {
         });
 
         if (!project.getRootProject().equals(project)) {
-            project.getRootProject().getTasks().getByName("classes").dependsOn(project.getTasks().getByName("classes"));
-
             // why this fixes a bug? who knows
             TaskDependency taskDependency = project.getTasks().getByName("compileJava").getTaskDependencies();
             taskDependency.getDependencies(project.getTasks().getByName("compileJava"));
@@ -710,7 +709,16 @@ public class KilnPlugin implements Plugin<Project> {
     }
 
     public void addAllMappingsProvider(IMappingsProvider mappingsProvider, boolean prefix) {
-        this.allMappingsProviders.add(new Pair<>(mappingsProvider, prefix));
+        if (allMappingsProviders.stream().noneMatch(pair -> pair.getLeft().equals(mappingsProvider))) {
+            allMappingsProviders.add(new Pair<>(mappingsProvider, prefix));
+        }
+    }
+
+    public IMappingsProvider getAllMappingsProvider(String id, String version, boolean prefix) {
+        return allMappingsProviders.stream().filter(pair -> {
+            IMappingsProvider mappingsProvider = pair.getLeft();
+            return Objects.equals(mappingsProvider.getID(), id) && Objects.equals(mappingsProvider.getVersion(), version);
+        }).findFirst().map(Pair::getLeft).orElse(null);
     }
 
     public List<Pair<IMappingsProvider, Boolean>> getAllMappingsProviders() {

@@ -232,8 +232,7 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
 
         for (String project : projects) {
             classpathString.append(String.format(
-                            "        <listEntry value=\"&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&#10;&lt;runtimeClasspathEntry path=&quot;5&quot; projectName=&quot;%s&quot; type=&quot;1&quot;/&gt;&#10;\"/>\n" +
-                            "        <listEntry value=\"&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&#10;&lt;runtimeClasspathEntry containerPath=&quot;org.eclipse.buildship.core.gradleclasspathcontainer&quot; javaProject=&quot;%s&quot; path=&quot;5&quot; type=&quot;4&quot;/&gt;&#10;\"/>\n", project, project));
+                    "        <listEntry value=\"&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;no&quot;?&gt;&#10;&lt;runtimeClasspathEntry containerPath=&quot;org.eclipse.buildship.core.gradleclasspathcontainer&quot; javaProject=&quot;%s&quot; path=&quot;5&quot; type=&quot;4&quot;/&gt;&#10;\"/>\n", /*project, */project));
         }
 
         String runConfigurationData = String.format(runConfigurationTemplate, module, classpathString, mainClass, module, programArguments, vmArguments, module, module);
@@ -272,18 +271,18 @@ public abstract class GenerateRunConfiguration extends DefaultTask {
                 "    <stringAttribute key=\"org.eclipse.debug.core.launchGroup.1.name\" value=\"%s\"/>\n" +
                 "</launchConfiguration>\n";
 
-        String runConfigurationGroupData = String.format(runConfigurationGroupTemplate, name.replace(" ", "_").replace(".", "_") + "2", name.replace(" ", "_").replace(".", "_"));
+        String runConfigurationGroupData = String.format(runConfigurationGroupTemplate, "classes", name.replace(" ", "_").replace(".", "_"));
 
         try {
             FileWriter fileWriter = new FileWriter(name.replace(" ", "_").replace(".", "_") + ".launch");
             fileWriter.write(runConfigurationData);
             fileWriter.close();
 
-            FileWriter fileWriter1 = new FileWriter(name.replace(" ", "_").replace(".", "_") + "2.launch");
+            FileWriter fileWriter1 = new FileWriter("classes.launch");
             fileWriter1.write(runConfigurationGradleClassesData);
             fileWriter1.close();
 
-            FileWriter fileWriter2 = new FileWriter(name.replace(" ", "_").replace(".", "_") + "3.launch");
+            FileWriter fileWriter2 = new FileWriter(name.replace(" ", "_").replace(".", "_") + "+.launch");
             fileWriter2.write(runConfigurationGroupData);
             fileWriter2.close();
         } catch (IOException e) {

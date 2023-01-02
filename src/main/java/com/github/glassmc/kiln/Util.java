@@ -44,25 +44,33 @@ public class Util {
         KilnPlugin plugin = KilnPlugin.getInstance();
         File pluginCache = plugin.getCache();
 
-        IMappingsProvider mappingsProvider;
-        switch(mappingsProviderId) {
-            case "yarn":
-                mappingsProvider = new YarnMappingsProvider();
-                break;
-            case "mojang":
-                mappingsProvider = new MojangMappingsProvider();
-                break;
-            case "mcp":
-                mappingsProvider = new MCPMappingsProvider();
-                break;
-            case "obfuscated":
-            default:
-                mappingsProvider = new ObfuscatedMappingsProvider();
-        }
-        plugin.addMappingsProvider(mappingsProvider, false);
-
         File minecraftFile = new File(pluginCache, "minecraft");
         File versionFile = new File(minecraftFile, version);
+
+        IMappingsProvider mappingsProvider = KilnPlugin.getMainInstance().getAllMappingsProvider(mappingsProviderId, version, false);
+        if (mappingsProvider == null) {
+            switch(mappingsProviderId) {
+                case "yarn":
+                    mappingsProvider = new YarnMappingsProvider();
+                    break;
+                case "mojang":
+                    mappingsProvider = new MojangMappingsProvider();
+                    break;
+                case "mcp":
+                    mappingsProvider = new MCPMappingsProvider();
+                    break;
+                case "obfuscated":
+                default:
+                    mappingsProvider = new ObfuscatedMappingsProvider();
+            }
+
+            try {
+                mappingsProvider.setup(versionFile, version, mappingsVersion);
+            } catch (NoSuchMappingsException e) {
+                e.printStackTrace();
+            }
+        }
+        plugin.addMappingsProvider(mappingsProvider, false);
 
         try {
             FileUtils.copyURLToFile(new URL("https://raw.githubusercontent.com/glassmc/data/new-format/kiln/mappings.json"), new File(pluginCache, "mappings.json"));
@@ -71,12 +79,6 @@ public class Util {
         }
 
         Util.setupMinecraft(id, version, mappingsVersion, pluginCache, new ObfuscatedMappingsProvider(), runtime);
-
-        try {
-            mappingsProvider.setup(versionFile, version, mappingsVersion);
-        } catch (NoSuchMappingsException e) {
-            e.printStackTrace();
-        }
 
         Util.setupMinecraft(id, version, mappingsVersion, pluginCache, mappingsProvider, runtime);
     }

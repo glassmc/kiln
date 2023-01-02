@@ -1,14 +1,15 @@
 package com.github.glassmc.kiln.launch;
 
 import com.github.glassmc.kiln.KilnPlugin;
-import com.github.glassmc.kiln.Pair;
 import com.github.glassmc.kiln.Util;
-import com.github.glassmc.kiln.mappings.IMappingsProvider;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.Dependency;
+import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.artifacts.repositories.ArtifactRepository;
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository;
-import org.gradle.api.plugins.JavaPlugin;
+import org.gradle.api.internal.artifacts.dsl.dependencies.DefaultDependencyHandler;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.json.JSONObject;
 
@@ -26,9 +27,9 @@ public class KilnLaunchPlugin implements Plugin<Project> {
         for (Project project1 : getAllProjects(project.getRootProject())) {
             if (!project1.getPath().contains("launch") && project1.getBuildFile().exists()) {
                 project.evaluationDependsOn(project1.getPath());
+                project.getTasks().findByName("classes").dependsOn(project1.getTasks().findByName("classes"));
             }
         }
-
 
         project.afterEvaluate(project1 -> {
             File pluginCache = KilnPlugin.getMainInstance().getCache();
@@ -45,16 +46,23 @@ public class KilnLaunchPlugin implements Plugin<Project> {
                                     mavenArtifactRepository.setUrl(mavenRepository.getUrl());
                                 });
                             }
+                        }
 
-                            project1.getDependencies().add("runtimeOnly", project1.files("build/classesobf"));
+                        for (Configuration configuration : project2.getConfigurations()) {
+                            if (!configuration.getName().equals("compileOnly")) {
+                                for (Dependency dependency : configuration.getDependencies()) {
+                                    project.getDependencies().add("runtimeOnly", dependency);
+                                }
+                            }
                         }
                     }
                 }
 
+                System.out.println("fop22o2");
+
                 for (Project project2 : getAllProjects(project1.getRootProject())) {
                     if (!project2.getPath().contains("launch") && project2.getBuildFile().exists()) {
                         JavaPluginExtension javaPlugin = project.project(project2.getPath()).getExtensions().getByType(JavaPluginExtension.class);
-                        project.getDependencies().add("implementation", project.project(project2.getPath()));
                         project.getDependencies().add("implementation", javaPlugin.getSourceSets().getByName("classesObf").getOutput());
                     }
                 }
@@ -78,13 +86,6 @@ public class KilnLaunchPlugin implements Plugin<Project> {
 
                 File minecraftFile = new File(pluginCache, "minecraft");
                 File localMaven = new File(minecraftFile, "localMaven");
-
-                /*IMappingsProvider mappingsProvider = null;
-                for (Pair<IMappingsProvider, Boolean> mappingsProviderPair : KilnPlugin.getMainInstance().getAllMappingsProviders()) {
-                    if (mappingsProviderPair.getLeft().getVersion().equals(extension.version)) {
-                        mappingsProvider = mappingsProviderPair.getLeft();
-                    }
-                }*/
 
                 File versionMappedJARFile = new File(localMaven, "net/minecraft/" + extension.environment + "-" + extension.version + "/obfuscated/" + extension.environment + "-" + extension.version + "-obfuscated.jar");
                 project.getDependencies().add("runtimeOnly", project.files(versionMappedJARFile.getAbsolutePath()));

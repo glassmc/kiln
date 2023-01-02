@@ -47,7 +47,9 @@ public class MojangMappingsProvider implements IMappingsProvider {
             URL mappingsURL = new URL(downloads.getJSONObject("client_mappings").getString("url"));
 
             File mappingsFile = new File(temp, "mojang-mappings-" + version + ".txt");
-            FileUtils.copyURLToFile(mappingsURL, mappingsFile);
+            if (!mappingsFile.exists()) {
+                FileUtils.copyURLToFile(mappingsURL, mappingsFile);
+            }
 
             obfuscator = ProGuardRemapper.create(mappingsFile);
             deobfuscator = obfuscator.reversed();
