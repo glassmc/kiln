@@ -58,8 +58,6 @@ public class KilnLaunchPlugin implements Plugin<Project> {
                     }
                 }
 
-                System.out.println("fop22o2");
-
                 for (Project project2 : getAllProjects(project1.getRootProject())) {
                     if (!project2.getPath().contains("launch") && project2.getBuildFile().exists()) {
                         JavaPluginExtension javaPlugin = project.project(project2.getPath()).getExtensions().getByType(JavaPluginExtension.class);

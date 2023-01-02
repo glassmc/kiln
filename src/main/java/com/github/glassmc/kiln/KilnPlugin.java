@@ -16,7 +16,6 @@ import org.gradle.api.provider.Provider;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.tasks.SourceSet;
-import org.gradle.api.tasks.TaskDependency;
 import org.objectweb.asm.*;
 import com.github.glassmc.kiln.internalremapper.ClassRemapper;
 import com.github.glassmc.kiln.internalremapper.Remapper;
@@ -107,8 +106,8 @@ public class KilnPlugin implements Plugin<Project> {
 
         if (!project.getRootProject().equals(project)) {
             // why this fixes a bug? who knows
-            TaskDependency taskDependency = project.getTasks().getByName("compileJava").getTaskDependencies();
-            taskDependency.getDependencies(project.getTasks().getByName("compileJava"));
+//            TaskDependency taskDependency = project.getTasks().getByName("compileJava").getTaskDependencies();
+//            taskDependency.getDependencies(project.getTasks().getByName("compileJava"));
 
             project.getRootProject().getTasks().getByName("shadowJar").dependsOn(project.getTasks().getByName("shadowJar"));
         }
